@@ -1,0 +1,275 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import {
+  AlertCircle,
+  ArrowRight,
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CheckCircle2,
+  RefreshCw,
+  Search,
+  Sparkles,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { get } from '@/lib/api';
+import { EmptyState, PageSkeleton, StudentShell } from '@/components/AppShell';
+
+const EASE_OUT = [0.16, 1, 0.3, 1];
+
+const bandMeta = {
+  strong: {
+    title: 'Strong',
+    copy: 'Skills you can lean on right now.',
+    icon: CheckCircle2,
+    cls: 'bg-primary/10 text-primary',
+  },
+  developing: {
+    title: 'Developing',
+    copy: 'Useful skills that are becoming reliable.',
+    icon: BarChart3,
+    cls: 'bg-accent/20 text-[#9b5f1e]',
+  },
+  weak: {
+    title: 'Needs practice',
+    copy: 'Good candidates for check-ins and focused practice.',
+    icon: Brain,
+    cls: 'bg-danger/10 text-danger',
+  },
+};
+
+const cardV = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
+};
+
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+function pct(value) {
+  return Math.round((Number(value) || 0) * 100);
+}
+
+function Shell({ children }) {
+  return <StudentShell>{children}</StudentShell>;
+}
+
+function LoadingState() {
+  return <PageSkeleton />;
+}
+
+function ErrorState({ error, onRetry }) {
+  return (
+    <Shell>
+      <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-center">
+        <AlertCircle size={38} className="text-danger" />
+        <p className="max-w-sm text-sm leading-6 text-muted">{error}</p>
+        <button
+          onClick={onRetry}
+          className="inline-flex h-11 items-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
+        >
+          <RefreshCw size={15} />
+          Retry
+        </button>
+      </div>
+    </Shell>
+  );
+}
+
+function SkillCard({ skill, band }) {
+  const meta = bandMeta[band];
+  const value = pct(skill.proficiency);
+
+  return (
+    <div className="rounded-input border border-[#ded7cd] bg-white/74 p-4 shadow-card backdrop-blur-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-display text-xl font-extrabold text-text">{skill.name ?? skill.code}</p>
+          <p className="mt-1 text-xs font-bold uppercase text-muted">{skill.domain ?? skill.code}</p>
+        </div>
+        <span className={`rounded-badge px-3 py-1.5 text-xs font-extrabold ${meta.cls}`}>
+          {value}%
+        </span>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-badge bg-[#e5ded4]">
+        <div className="h-full rounded-badge bg-primary" style={{ width: `${value}%` }} />
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="text-sm leading-6 text-muted">
+          {value >= 70 ? 'Ready to apply in projects.' : value >= 40 ? 'Keep building consistency.' : 'Needs focused practice.'}
+        </span>
+        <Link
+          href={`/student/checkin/${skill.code}`}
+          className="inline-flex h-9 items-center gap-2 rounded-input bg-primary px-3 text-xs font-extrabold text-white"
+        >
+          Check in
+          <ArrowRight size={13} />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function BandColumn({ band, items }) {
+  const meta = bandMeta[band];
+  const Icon = meta.icon;
+
+  return (
+    <motion.section
+      variants={cardV}
+      className="rounded-input border border-[#ded7cd] bg-white/58 p-4 shadow-[0_20px_70px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-input ${meta.cls}`}>
+          <Icon size={20} />
+        </div>
+        <div>
+          <h2 className="font-display text-2xl font-extrabold text-text">{meta.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-muted">{meta.copy}</p>
+        </div>
+      </div>
+      <div className="mt-5 flex flex-col gap-3">
+        {items.length > 0 ? (
+          items.map((skill) => <SkillCard key={skill.skillId ?? skill.code} skill={skill} band={band} />)
+        ) : (
+          <EmptyState
+            icon={meta.icon}
+            title={`No ${meta.title.toLowerCase()} skills yet.`}
+            copy="This section will fill in as your learner model gathers signal."
+          />
+        )}
+      </div>
+    </motion.section>
+  );
+}
+
+export default function StudentSkillsPage() {
+  const [data, setData] = useState(null);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  function load() {
+    setLoading(true);
+    setError('');
+
+    get('/student/skills')
+      .then(setData)
+      .catch((err) => setError(err.message || 'Could not load skills'))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const empty = { strong: [], developing: [], weak: [] };
+    if (!data) return empty;
+    return Object.fromEntries(
+      Object.entries(empty).map(([band]) => [
+        band,
+        (data[band] ?? []).filter((skill) => {
+          if (!q) return true;
+          return `${skill.name ?? ''} ${skill.code ?? ''} ${skill.domain ?? ''}`.toLowerCase().includes(q);
+        }),
+      ]),
+    );
+  }, [data, query]);
+
+  const totals = data
+    ? {
+        all: (data.strong?.length ?? 0) + (data.developing?.length ?? 0) + (data.weak?.length ?? 0),
+        strong: data.strong?.length ?? 0,
+        practice: (data.developing?.length ?? 0) + (data.weak?.length ?? 0),
+      }
+    : { all: 0, strong: 0, practice: 0 };
+
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState error={error} onRetry={load} />;
+
+  return (
+    <Shell>
+      <motion.div variants={container} initial="hidden" animate="show">
+        <section className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.78fr] lg:items-end">
+          <motion.div variants={cardV}>
+            <p className="mb-4 text-xs font-extrabold uppercase text-primary">Skill map</p>
+            <h1 className="font-display text-5xl font-extrabold leading-[0.96] text-text sm:text-7xl">
+              Know where to push next.
+            </h1>
+            <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
+              A focused view of your strong, developing, and weak skills, with check-ins ready
+              for the areas that need signal.
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={cardV}
+            className="rounded-input border border-[#ded7cd] bg-primary p-5 text-white shadow-[0_24px_80px_rgba(45,37,24,0.12)]"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-extrabold uppercase text-white/70">Skill signal</p>
+              <Sparkles size={19} className="text-accent" />
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <div>
+                <p className="font-display text-4xl font-extrabold">{totals.all}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-white/70">Tracked</p>
+              </div>
+              <div>
+                <p className="font-display text-4xl font-extrabold">{totals.strong}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-white/70">Strong</p>
+              </div>
+              <div>
+                <p className="font-display text-4xl font-extrabold">{totals.practice}</p>
+                <p className="mt-1 text-xs font-bold uppercase text-white/70">Practice</p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        <motion.div variants={cardV} className="mt-8 flex items-center gap-2 rounded-input border border-[#ded7cd] bg-white/74 px-4 shadow-card backdrop-blur-xl">
+          <Search size={17} className="text-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search skills"
+            className="h-12 w-full bg-transparent text-sm font-medium text-text outline-none placeholder:text-muted/70"
+          />
+        </motion.div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-3">
+          <BandColumn band="strong" items={filtered.strong} />
+          <BandColumn band="developing" items={filtered.developing} />
+          <BandColumn band="weak" items={filtered.weak} />
+        </div>
+
+        <motion.div
+          variants={cardV}
+          className="mt-6 rounded-input border border-[#ded7cd] bg-white/70 p-5 shadow-card backdrop-blur-xl"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-extrabold uppercase text-primary">Companion support</p>
+              <p className="mt-1 text-sm leading-6 text-muted">
+                Ask for a practice plan or explanation for any weak skill.
+              </p>
+            </div>
+            <Link
+              href="/student/companion"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
+            >
+              Open companion
+              <BookOpenCheck size={15} />
+            </Link>
+          </div>
+        </motion.div>
+      </motion.div>
+    </Shell>
+  );
+}
