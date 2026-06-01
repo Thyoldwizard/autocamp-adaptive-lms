@@ -19,7 +19,7 @@ All screenshots were captured in demo mode (no backend or login required) using 
 
 ```bash
 # Make sure the frontend dev server is running:
-cd autocamp-frontend && npm run dev
+cd frontend && npm run dev
 
 # Then from the repo root:
 node scripts/capture-screenshots.mjs
