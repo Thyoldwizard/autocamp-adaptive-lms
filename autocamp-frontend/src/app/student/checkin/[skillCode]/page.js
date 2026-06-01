@@ -17,8 +17,7 @@ import {
 import { motion } from 'framer-motion';
 import { post } from '@/lib/api';
 import { PageSkeleton, StudentShell } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
+import { EASE_OUT } from '@/lib/constants';
 
 function prettySkill(code) {
   return String(code || '')
@@ -98,9 +97,18 @@ function ResultPanel({ result, skillName, onRestart }) {
         {review.length > 0 && (
           <div className="border-t border-[#ded7cd] p-6 sm:p-8">
             <p className="text-[11px] font-extrabold uppercase text-primary">Question review</p>
-            <div className="mt-4 grid gap-3">
+            <motion.div
+              className="mt-4 grid gap-3"
+              variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
+              initial="hidden"
+              animate="show"
+            >
               {review.map((item, index) => (
-                <div key={`${item.question}-${index}`} className="rounded-input border border-[#ded7cd] bg-white/80 p-4">
+                <motion.div
+                  key={`${item.question}-${index}`}
+                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE_OUT } } }}
+                  className="rounded-input border border-[#ded7cd] bg-white/80 p-4"
+                >
                   <div className="flex items-start justify-between gap-4">
                     <p className="text-sm font-extrabold leading-6 text-text">
                       {index + 1}. {item.question}
@@ -115,9 +123,9 @@ function ResultPanel({ result, skillName, onRestart }) {
                   <p className="mt-2 text-xs font-bold uppercase text-muted">
                     Correct answer: {item.options?.[item.correctIndex] ?? `Option ${item.correctIndex + 1}`}
                   </p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
         {!passed && (

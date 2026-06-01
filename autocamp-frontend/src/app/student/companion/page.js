@@ -14,8 +14,7 @@ import {
 import { motion } from 'framer-motion';
 import { get, post } from '@/lib/api';
 import { EmptyState, PageSkeleton, StudentShell } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
+import { EASE_OUT } from '@/lib/constants';
 
 const fallbackStarterPrompts = [
   'Explain my weakest skill in plain English.',
@@ -221,10 +220,25 @@ export default function StudentCompanionPage() {
               </div>
             )}
             {sending && (
-              <div className="flex items-center gap-3 text-sm font-bold text-primary">
-                <Loader2 size={16} className="animate-spin" />
-                Companion is thinking
-              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-3"
+              >
+                <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-input bg-primary text-white">
+                  <Bot size={17} />
+                </div>
+                <div className="flex items-center gap-1.5 rounded-input border border-[#ded7cd] bg-white/78 px-5 py-4 shadow-card backdrop-blur-xl">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 0.65, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                      className="block h-2 w-2 rounded-full bg-primary/55"
+                    />
+                  ))}
+                </div>
+              </motion.div>
             )}
             <div ref={scrollRef} />
           </div>

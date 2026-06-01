@@ -21,13 +21,23 @@
     "test:companion": "node --test tests/services/companion.test.js",
     "test:checkin": "node --test tests/services/checkin.test.js",
     "test:sweep": "node --test tests/jobs/signalSweep.test.js",
-    "test:all": "node --test tests/middleware/auth.test.js tests/middleware/requireRole.test.js tests/middleware/ownLearnerOnly.test.js tests/routes/auth.test.js tests/routes/routes.test.js tests/repositories/repos.integration.test.js tests/services/learnerModel.service.test.js tests/services/dashboard.service.test.js tests/services/cohort.service.test.js tests/services/companion.test.js tests/services/checkin.test.js tests/jobs/signalSweep.test.js"
+    "test:rules": "node --test tests/rules/atRiskScore.test.js tests/rules/goalProgress.test.js tests/rules/nextBestAction.test.js tests/rules/struggleDetectors.test.js",
+    "test:config": "node --test tests/config/rules.test.js",
+    "test:validate": "node --test tests/middleware/validate.test.js",
+    "test:hardening": "node --test tests/middleware/requestLogger.test.js tests/middleware/rateLimit.test.js",
+    "test:llm": "node --test tests/services/llmRobustness.test.js",
+    "test:onboarding": "node --test tests/services/onboarding.test.js",
+    "test:all": "node --test tests/middleware/auth.test.js tests/middleware/requireRole.test.js tests/middleware/ownLearnerOnly.test.js tests/middleware/validate.test.js tests/middleware/requestLogger.test.js tests/middleware/rateLimit.test.js tests/routes/auth.test.js tests/routes/routes.test.js tests/repositories/repos.integration.test.js tests/services/learnerModel.service.test.js tests/services/dashboard.service.test.js tests/services/cohort.service.test.js tests/services/companion.test.js tests/services/checkin.test.js tests/services/llmRobustness.test.js tests/services/onboarding.test.js tests/jobs/signalSweep.test.js tests/rules/atRiskScore.test.js tests/rules/goalProgress.test.js tests/rules/nextBestAction.test.js tests/rules/struggleDetectors.test.js tests/config/rules.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "express": "^4.18.0",
-    "jsonwebtoken": "^9.0.3"
+    "express-rate-limit": "^7.0.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"

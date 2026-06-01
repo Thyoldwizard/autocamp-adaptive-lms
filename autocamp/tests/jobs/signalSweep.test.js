@@ -18,7 +18,11 @@ const assert = require('node:assert/strict');
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
-const NOW = new Date('2026-05-17T00:00:00Z');
+// Anchor the mock clock to the real current time so the relative `daysAgo()`
+// offsets below line up with runSweep(), which uses the real `new Date()`.
+// (Previously frozen at a fixed date, which silently rotted as real time moved
+// past it: "recent" mock data eventually read as stalled and flipped the tests.)
+const NOW = new Date();
 
 function daysAgo(days) {
   const d = new Date(NOW);
@@ -161,11 +165,22 @@ function mockProgressFindByLearnerId(learnerId) {
   return mockProgressMap[learnerId] ?? [];
 }
 
+function mockProgressFindByLearnerIds(learnerIds) {
+  return learnerIds.flatMap((id) => mockProgressMap[id] ?? []);
+}
+
 function mockSignalsFindRecent(learnerId, days) {
   const signals = mockSignalsMap[learnerId] ?? [];
-  // Filter by recent window
   const cutoff = daysAgo(days);
   return signals.filter((s) => s.created_at >= cutoff);
+}
+
+function mockSignalsFindRecentByLearnerIds(learnerIds, days) {
+  const cutoff = daysAgo(days);
+  return learnerIds.flatMap((id) => {
+    const signals = mockSignalsMap[id] ?? [];
+    return signals.filter((s) => s.created_at >= cutoff);
+  });
 }
 
 function mockSignalsInsert(row) {
@@ -200,7 +215,8 @@ require.cache[require.resolve('../../src/db/repositories/progress.repo')] = {
   filename: require.resolve('../../src/db/repositories/progress.repo'),
   loaded: true,
   exports: {
-    findByLearnerId: mockProgressFindByLearnerId,
+    findByLearnerId:   mockProgressFindByLearnerId,
+    findByLearnerIds:  mockProgressFindByLearnerIds,
   },
 };
 
@@ -209,8 +225,9 @@ require.cache[require.resolve('../../src/db/repositories/signals.repo')] = {
   filename: require.resolve('../../src/db/repositories/signals.repo'),
   loaded: true,
   exports: {
-    findRecentByLearnerId: mockSignalsFindRecent,
-    insert: mockSignalsInsert,
+    findRecentByLearnerId:   mockSignalsFindRecent,
+    findRecentByLearnerIds:  mockSignalsFindRecentByLearnerIds,
+    insert:                  mockSignalsInsert,
   },
 };
 

@@ -17,6 +17,7 @@ const learnersRepo   = require('../db/repositories/learners.repo');
 const skillStateRepo = require('../db/repositories/skillState.repo');
 const signalsRepo    = require('../db/repositories/signals.repo');
 const { refreshAnalysis } = require('./learnerModel.service');
+const { getRules }   = require('../config/rules');
 
 // ─── Severity levels considered "at risk" enough to surface to instructors ────
 const AT_RISK_LEVELS = new Set(['medium', 'high', 'critical']);
@@ -105,7 +106,7 @@ function averageGoalProgress(summaries) {
 async function getCohortOverview(cohort) {
   if (!cohort) throw new Error('getCohortOverview: cohort is required');
 
-  const learners  = await learnersRepo.findByCohort(cohort);
+  const learners  = await learnersRepo.findByCohort(cohort, { limit: 100 });
   const summaries = await buildLearnerSummaries(learners);
 
   return {
@@ -133,7 +134,7 @@ async function getCohortOverview(cohort) {
 async function getAtRiskList(cohort) {
   if (!cohort) throw new Error('getAtRiskList: cohort is required');
 
-  const learners  = await learnersRepo.findByCohort(cohort);
+  const learners  = await learnersRepo.findByCohort(cohort, { limit: 100 });
   const summaries = await buildLearnerSummaries(learners);
 
   const flagged = summaries.filter((s) => AT_RISK_LEVELS.has(s.atRisk.level));
@@ -153,8 +154,9 @@ async function getAtRiskList(cohort) {
  *
  * For each skill that appears in at least one learner's skill_state:
  *   - averageProficiency: mean proficiency across all learners who have that skill
- *   - learnersStruggling: count of learners with proficiency < 0.4
- *   - learnersStrong:     count of learners with proficiency >= 0.7
+ *   - learnersStruggling: count of learners below the developing band
+ *   - learnersStrong:     count of learners at/above the strong band
+ * (Band thresholds come from config/rules.js → bands.)
  *
  * Sorted by averageProficiency ascending — weakest cohort skills first.
  *
@@ -174,7 +176,9 @@ async function getAtRiskList(cohort) {
 async function getStruggleHeatmap(cohort) {
   if (!cohort) throw new Error('getStruggleHeatmap: cohort is required');
 
-  const learners = await learnersRepo.findByCohort(cohort);
+  const { strong: STRONG_BAND, developing: DEVELOPING_BAND } = getRules().bands;
+
+  const learners = await learnersRepo.findByCohort(cohort, { limit: 100 });
   if (!learners.length) return { cohort, skills: [] };
 
   // Fetch all skill_state rows for every cohort learner in parallel
@@ -210,8 +214,8 @@ async function getStruggleHeatmap(cohort) {
         skillCode,
         skillName,
         averageProficiency: Math.round(avg * 1000) / 1000, // 3 decimal places
-        learnersStruggling: proficiencies.filter((p) => p < 0.4).length,
-        learnersStrong:     proficiencies.filter((p) => p >= 0.7).length,
+        learnersStruggling: proficiencies.filter((p) => p < DEVELOPING_BAND).length,
+        learnersStrong:     proficiencies.filter((p) => p >= STRONG_BAND).length,
       };
     },
   );

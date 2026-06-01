@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { setDemoMode } from '@/lib/demoMode';
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
 
@@ -117,6 +119,7 @@ function Ticker({ dark = false }) {
 
   return (
     <div
+      aria-hidden="true"
       className={`overflow-hidden border-y backdrop-blur-xl ${
         dark ? 'border-[#ded7cd] bg-white/55' : 'border-white/20 bg-black/20'
       }`}
@@ -163,6 +166,53 @@ function Nav() {
         </div>
       </nav>
     </header>
+  );
+}
+
+function DemoEntryButtons({ dark = false }) {
+  const router = useRouter();
+
+  function enter(role) {
+    setDemoMode(role);
+    router.push(role === 'instructor' ? '/instructor/cohort' : '/student/dashboard');
+  }
+
+  const labelCls = dark
+    ? 'text-muted'
+    : 'text-white/55';
+
+  const studentCls = dark
+    ? 'border border-[#ded7cd] bg-white/80 text-primary hover:bg-white'
+    : 'border border-white/24 bg-white/12 text-white backdrop-blur-xl hover:bg-white/18';
+
+  const instructorCls = dark
+    ? 'border border-[#ded7cd] bg-white/80 text-primary hover:bg-white'
+    : 'border border-white/24 bg-white/12 text-white backdrop-blur-xl hover:bg-white/18';
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className={`text-[11px] font-bold uppercase ${labelCls}`}>
+        Or explore the live demo — no account needed
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => enter('student')}
+          className={`inline-flex h-[48px] items-center justify-center gap-2 rounded-badge px-6 text-sm font-extrabold transition-colors ${studentCls}`}
+        >
+          <GraduationCap size={16} />
+          Explore as student
+        </button>
+        <button
+          type="button"
+          onClick={() => enter('instructor')}
+          className={`inline-flex h-[48px] items-center justify-center gap-2 rounded-badge px-6 text-sm font-extrabold transition-colors ${instructorCls}`}
+        >
+          <Users size={16} />
+          Explore as instructor
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -300,9 +350,10 @@ function Hero() {
       <div
         className="absolute inset-0 scale-[1.03] bg-cover bg-center"
         style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+        aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(112deg,rgba(17,43,33,0.98)_0%,rgba(45,106,79,0.9)_46%,rgba(244,162,97,0.48)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(112deg,rgba(17,43,33,0.98)_0%,rgba(45,106,79,0.9)_46%,rgba(244,162,97,0.48)_100%)]" aria-hidden="true" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:64px_64px]" aria-hidden="true" />
 
       <Nav />
 
@@ -330,24 +381,27 @@ function Hero() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.72, ease: EASE_OUT, delay: 0.34 }}
-            className="mt-9 flex flex-col gap-3 sm:flex-row"
+            className="mt-9 flex flex-col gap-4"
           >
-            <Link
-              href="/register"
-              className="group inline-flex h-[52px] items-center justify-center gap-2 rounded-badge bg-white px-7 text-sm font-extrabold text-primary shadow-[0_20px_54px_rgba(0,0,0,0.22)] transition-transform duration-micro hover:-translate-y-0.5"
-            >
-              Start learning
-              <ArrowRight
-                size={17}
-                className="transition-transform duration-micro group-hover:translate-x-0.5"
-              />
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex h-[52px] items-center justify-center rounded-badge border border-white/28 bg-white/10 px-7 text-sm font-extrabold text-white backdrop-blur-xl transition-colors duration-micro hover:bg-white/16"
-            >
-              Sign in
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/register"
+                className="group inline-flex h-[52px] items-center justify-center gap-2 rounded-badge bg-white px-7 text-sm font-extrabold text-primary shadow-[0_20px_54px_rgba(0,0,0,0.22)] transition-transform duration-micro hover:-translate-y-0.5"
+              >
+                Start learning
+                <ArrowRight
+                  size={17}
+                  className="transition-transform duration-micro group-hover:translate-x-0.5"
+                />
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex h-[52px] items-center justify-center rounded-badge border border-white/28 bg-white/10 px-7 text-sm font-extrabold text-white backdrop-blur-xl transition-colors duration-micro hover:bg-white/16"
+              >
+                Sign in
+              </Link>
+            </div>
+            <DemoEntryButtons />
           </motion.div>
 
           <div className="mt-12 grid max-w-[760px] grid-cols-2 gap-5 sm:grid-cols-4">
@@ -415,7 +469,7 @@ function SignalCard({ icon: Icon, title, copy, index }) {
 function ProductDepth() {
   return (
     <section className="relative overflow-hidden bg-[#efe9df] px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(45,106,79,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(45,106,79,0.06)_1px,transparent_1px)] bg-[size:56px_56px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(45,106,79,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(45,106,79,0.06)_1px,transparent_1px)] bg-[size:56px_56px]" aria-hidden="true" />
       <div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.86fr_1.14fr]">
         <div className="flex flex-col justify-between gap-10">
           <div>
@@ -433,6 +487,7 @@ function ProductDepth() {
             <div
               className="h-64 bg-cover bg-center"
               style={{ backgroundImage: `url(${SECONDARY_IMAGE})` }}
+              aria-hidden="true"
             />
             <div className="grid grid-cols-3 divide-x divide-[#ded7cd]">
               <div className="p-4">
@@ -512,8 +567,9 @@ function ShowcaseBand() {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${WORKSHOP_IMAGE})` }}
+            aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(15,40,29,0.86)_0%,rgba(15,40,29,0.16)_62%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(15,40,29,0.86)_0%,rgba(15,40,29,0.16)_62%)]" aria-hidden="true" />
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
             <div className="rounded-input border border-white/24 bg-[#112b21]/52 p-4 text-white shadow-[0_22px_70px_rgba(0,0,0,0.22)] backdrop-blur-2xl sm:p-5">
               <p className="text-[11px] font-extrabold uppercase text-white/62">
@@ -591,23 +647,26 @@ function FinalCta() {
               Sign in to continue your dashboard, or create an account to begin onboarding.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
-            <Link
-              href="/login"
-              className="inline-flex h-12 items-center justify-center rounded-badge border border-[#d8d0c4] px-6 text-sm font-extrabold text-primary transition-colors hover:bg-white"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="group inline-flex h-12 items-center justify-center gap-2 rounded-badge bg-primary px-6 text-sm font-extrabold text-white transition-colors hover:bg-[#255c43]"
-            >
-              Create account
-              <ArrowRight
-                size={16}
-                className="transition-transform duration-micro group-hover:translate-x-0.5"
-              />
-            </Link>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
+              <Link
+                href="/login"
+                className="inline-flex h-12 items-center justify-center rounded-badge border border-[#d8d0c4] px-6 text-sm font-extrabold text-primary transition-colors hover:bg-white"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/register"
+                className="group inline-flex h-12 items-center justify-center gap-2 rounded-badge bg-primary px-6 text-sm font-extrabold text-white transition-colors hover:bg-[#255c43]"
+              >
+                Create account
+                <ArrowRight
+                  size={16}
+                  className="transition-transform duration-micro group-hover:translate-x-0.5"
+                />
+              </Link>
+            </div>
+            <DemoEntryButtons dark />
           </div>
         </div>
       </div>

@@ -7,7 +7,22 @@
  * - On 401 the token is cleared and the browser is redirected to /login.
  * - Throws a plain Error (with the server's message text) on any other non-OK
  *   response so callers can catch it and display feedback.
+ * - When demo mode is active (autocamp_demo in localStorage), GET calls are
+ *   short-circuited to demoData and POSTs return canned no-op responses.
  */
+
+import { getDemoRole } from './demoMode';
+import {
+  demoStudentDashboard,
+  demoSkills,
+  demoCheckin,
+  demoCheckinResult,
+  demoCompanionResponse,
+  demoInstructorOverview,
+  demoInstructorAtRisk,
+  demoInstructorHeatmap,
+  demoLearnerDetail,
+} from './demoData';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -59,11 +74,52 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// --- Demo short-circuit maps ---
+
+const DEMO_GET_MAP = {
+  '/student/dashboard': demoStudentDashboard,
+  '/student/skills': demoSkills,
+  '/student/onboarding/status': { completed: true },
+  '/instructor/cohort': demoInstructorOverview,
+  '/instructor/cohort/at-risk': demoInstructorAtRisk,
+  '/instructor/cohort/heatmap': demoInstructorHeatmap,
+};
+
+function getDemoGet(path) {
+  if (Object.prototype.hasOwnProperty.call(DEMO_GET_MAP, path)) {
+    return DEMO_GET_MAP[path];
+  }
+  if (/^\/instructor\/learner\/[^/]+$/.test(path)) return demoLearnerDetail;
+  return undefined;
+}
+
+function getDemoPost(path) {
+  if (/^\/student\/checkin\/start\//.test(path)) return demoCheckin;
+  if (/^\/student\/checkin\/submit\//.test(path)) return demoCheckinResult;
+  if (path === '/student/companion') return demoCompanionResponse;
+  // No-op POSTs: onboarding complete, flag
+  if (
+    path === '/student/onboarding/complete' ||
+    /^\/instructor\/learner\/[^/]+\/flag$/.test(path)
+  ) {
+    return {};
+  }
+  return undefined;
+}
+
 export function get(path) {
+  if (getDemoRole()) {
+    const demoData = getDemoGet(path);
+    if (demoData !== undefined) return Promise.resolve(demoData);
+  }
   return request(path, { method: "GET" });
 }
 
 export function post(path, body) {
+  if (getDemoRole()) {
+    const demoData = getDemoPost(path);
+    if (demoData !== undefined) return Promise.resolve(demoData);
+  }
   return request(path, {
     method: "POST",
     body: body !== undefined ? JSON.stringify(body) : undefined,

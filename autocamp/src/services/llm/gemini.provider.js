@@ -52,7 +52,7 @@ function toGeminiContents(messages) {
  * Returns the raw Response object so the caller can inspect status.
  */
 async function callGemini(system, messages) {
-  const url  = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+  const url  = `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent`;
   const body = {
     system_instruction: system ? { parts: [{ text: system }] } : undefined,
     contents:           toGeminiContents(messages),
@@ -64,8 +64,11 @@ async function callGemini(system, messages) {
 
   return fetch(url, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
+    headers: {
+      'Content-Type':   'application/json',
+      'x-goog-api-key': GEMINI_API_KEY,
+    },
+    body: JSON.stringify(body),
   });
 }
 

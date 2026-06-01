@@ -21,4 +21,6 @@ module.exports = {
   SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
   LLM_PROVIDER: process.env.LLM_PROVIDER || 'fallback',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  ENABLE_SIGNAL_SWEEP: process.env.ENABLE_SIGNAL_SWEEP === 'true',
+  SIGNAL_SWEEP_INTERVAL_MS: parseInt(process.env.SIGNAL_SWEEP_INTERVAL_MS, 10) || 60 * 60 * 1000,
 };

@@ -72,4 +72,22 @@ async function findByCode(code) {
   return data ?? null;
 }
 
-module.exports = { findAll, findById, findByCodes, findByCode };
+/**
+ * Find multiple skills by their primary key UUIDs.
+ * Returns only id + code — useful for building code→id maps in onboarding.
+ * @param {string[]} ids
+ * @returns {Promise<Array<{ id: string, code: string }>>}
+ */
+async function findByIds(ids) {
+  if (!ids?.length) return [];
+
+  const { data, error } = await supabase
+    .from('skills')
+    .select('id, code')
+    .in('id', ids);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+module.exports = { findAll, findById, findByIds, findByCodes, findByCode };

@@ -15,35 +15,23 @@ import {
   Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  Cell,
+} from 'recharts';
 import { get, post } from '@/lib/api';
 import { EmptyState, InstructorShell, PageSkeleton } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
-
-const RISK = {
-  low: { label: 'Low', cls: 'bg-primary/10 text-primary' },
-  medium: { label: 'Medium', cls: 'bg-accent/20 text-[#9b5f1e]' },
-  high: { label: 'High', cls: 'bg-danger/10 text-danger' },
-  critical: { label: 'Critical', cls: 'bg-red-100 text-red-700' },
-};
-
-const cardV = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
-};
-
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
+import { Card, MetricCard, RiskBadge, Modal, ProgressBar } from '@/components/ui';
+import { CARD_V, CONTAINER_V } from '@/lib/constants';
 
 function pct(value) {
   if (value === undefined || value === null || Number.isNaN(Number(value))) return 0;
   return Math.round(Number(value));
-}
-
-function riskMeta(level) {
-  return RISK[level] ?? RISK.low;
 }
 
 function cohortName(cohort) {
@@ -80,30 +68,10 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, detail }) {
-  return (
-    <motion.div
-      variants={cardV}
-      className="rounded-input border border-[#ded7cd] bg-white/72 p-5 shadow-[0_20px_70px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-extrabold uppercase text-muted">{label}</p>
-          <p className="mt-2 font-display text-4xl font-extrabold text-text">{value}</p>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-input bg-primary/10 text-primary">
-          <Icon size={22} />
-        </div>
-      </div>
-      {detail && <p className="mt-3 text-sm leading-6 text-muted">{detail}</p>}
-    </motion.div>
-  );
-}
-
 function HeatBar({ skill }) {
   const avg = pct((skill.averageProficiency ?? 0) * 100);
   return (
-    <div className="rounded-input border border-[#ded7cd] bg-white/72 p-4 backdrop-blur-xl">
+    <Card variant="flat" className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-extrabold text-text">{skill.skillName || skill.skillCode}</p>
@@ -113,16 +81,63 @@ function HeatBar({ skill }) {
         </div>
         <span className="font-display text-2xl font-extrabold text-primary">{avg}%</span>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-badge bg-[#e5ded4]">
-        <div className="h-full rounded-badge bg-primary" style={{ width: `${avg}%` }} />
-      </div>
+      <ProgressBar value={avg} className="mt-3" />
+    </Card>
+  );
+}
+
+function skillBarColor(avg) {
+  if (avg < 0.4) return '#E63946';
+  if (avg < 0.7) return '#F4A261';
+  return '#2D6A4F';
+}
+
+function SkillTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-input border border-[#ded7cd] bg-white px-3 py-2 text-xs font-extrabold text-primary shadow-card">
+      {payload[0].payload.skillName}: {Math.round(payload[0].value * 100)}%
+    </div>
+  );
+}
+
+function SkillProficiencyChart({ skills = [] }) {
+  if (!skills.length) return null;
+  const chartHeight = Math.max(skills.length * 52, 120);
+  return (
+    <div style={{ height: chartHeight }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart layout="vertical" data={skills} margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
+          <XAxis
+            type="number"
+            domain={[0, 1]}
+            tickFormatter={(v) => `${Math.round(v * 100)}%`}
+            tick={{ fontSize: 11, fontWeight: 700, fill: '#9b8f83' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            type="category"
+            dataKey="skillName"
+            width={130}
+            tick={{ fontSize: 12, fontWeight: 700, fill: '#2c2410' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip content={<SkillTooltip />} cursor={{ fill: 'rgba(45,106,79,0.06)' }} />
+          <Bar dataKey="averageProficiency" radius={[0, 4, 4, 0]} maxBarSize={22}>
+            {skills.map((skill) => (
+              <Cell key={skill.skillId} fill={skillBarColor(skill.averageProficiency)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
 function LearnerRow({ learner, onFlag, flagging }) {
   const level = learner.atRisk?.level ?? 'low';
-  const risk = riskMeta(level);
   const progress = pct(learner.goalProgress?.percentage);
   const action = learner.nextBestAction ?? {};
 
@@ -138,9 +153,7 @@ function LearnerRow({ learner, onFlag, flagging }) {
         <p className="mt-1 text-xs font-bold uppercase text-muted">{learner.learnerId}</p>
       </div>
       <div>
-        <span className={`rounded-badge px-3 py-1.5 text-xs font-extrabold ${risk.cls}`}>
-          {risk.label} risk
-        </span>
+        <RiskBadge level={level} />
         <p className="mt-2 text-sm font-bold text-primary">{progress}% goal progress</p>
       </div>
       <div>
@@ -165,21 +178,20 @@ function LearnerRow({ learner, onFlag, flagging }) {
 }
 
 export default function InstructorCohortPage() {
-  const [overview, setOverview] = useState(null);
-  const [atRisk, setAtRisk] = useState(null);
-  const [heatmap, setHeatmap] = useState(null);
+  const [overview, setOverview]       = useState(null);
+  const [atRisk, setAtRisk]           = useState(null);
+  const [heatmap, setHeatmap]         = useState(null);
   const [selectedCohort, setSelectedCohort] = useState('');
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [flagging, setFlagging] = useState('');
-  const [flagTarget, setFlagTarget] = useState(null);
-  const [flagNote, setFlagNote] = useState('');
+  const [query, setQuery]             = useState('');
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState('');
+  const [flagging, setFlagging]       = useState('');
+  const [flagTarget, setFlagTarget]   = useState(null);
+  const [flagNote, setFlagNote]       = useState('');
 
   function load() {
     setLoading(true);
     setError('');
-
     Promise.all([
       get('/instructor/cohort'),
       get('/instructor/cohort/at-risk'),
@@ -196,9 +208,7 @@ export default function InstructorCohortPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   function handleFlag(learner) {
     setFlagTarget(learner);
@@ -210,9 +220,7 @@ export default function InstructorCohortPage() {
     const learner = flagTarget;
     setFlagging(learner.learnerId);
     try {
-      await post(`/instructor/learner/${learner.learnerId}/flag`, {
-        note: flagNote.trim(),
-      });
+      await post(`/instructor/learner/${learner.learnerId}/flag`, { note: flagNote.trim() });
       setFlagTarget(null);
       setFlagNote('');
       load();
@@ -223,11 +231,11 @@ export default function InstructorCohortPage() {
     }
   }
 
-  const cohorts = flattenCohorts(overview);
-  const active = cohorts.find((c) => c.cohort === selectedCohort) ?? cohorts[0];
-  const activeRisk = flattenCohorts(atRisk).find((c) => c.cohort === active?.cohort);
+  const cohorts       = flattenCohorts(overview);
+  const active        = cohorts.find((c) => c.cohort === selectedCohort) ?? cohorts[0];
+  const activeRisk    = flattenCohorts(atRisk).find((c) => c.cohort === active?.cohort);
   const activeHeatmap = flattenCohorts(heatmap).find((c) => c.cohort === active?.cohort);
-  const allLearners = useMemo(() => active?.learners ?? [], [active]);
+  const allLearners   = useMemo(() => active?.learners ?? [], [active]);
 
   const filteredLearners = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -240,7 +248,7 @@ export default function InstructorCohortPage() {
 
   const totals = useMemo(() => {
     const totalLearners = cohorts.reduce((sum, c) => sum + (c.totalLearners ?? 0), 0);
-    const actionCount = flattenCohorts(atRisk).reduce((sum, c) => sum + (c.totalLearners ?? 0), 0);
+    const actionCount   = flattenCohorts(atRisk).reduce((sum, c) => sum + (c.totalLearners ?? 0), 0);
     const avg =
       cohorts.length === 0
         ? 0
@@ -253,9 +261,9 @@ export default function InstructorCohortPage() {
 
   return (
     <Shell>
-      <motion.div variants={container} initial="hidden" animate="show">
+      <motion.div variants={CONTAINER_V} initial="hidden" animate="show">
         <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-end">
-          <motion.div variants={cardV}>
+          <motion.div variants={CARD_V}>
             <p className="mb-4 text-xs font-extrabold uppercase text-primary">Cohort intelligence</p>
             <h1 className="font-display text-5xl font-extrabold leading-[0.96] text-text sm:text-7xl">
               Instructor command center.
@@ -267,7 +275,7 @@ export default function InstructorCohortPage() {
           </motion.div>
 
           <motion.div
-            variants={cardV}
+            variants={CARD_V}
             className="rounded-input border border-[#ded7cd] bg-primary p-5 text-white shadow-[0_24px_80px_rgba(45,37,24,0.12)]"
           >
             <div className="flex items-center justify-between">
@@ -299,55 +307,54 @@ export default function InstructorCohortPage() {
         )}
 
         <section className="mt-8 grid gap-4 md:grid-cols-3">
-          <MetricCard icon={Users} label="Learners" value={totals.totalLearners} detail="Across authorized cohorts." />
-          <MetricCard icon={Flame} label="Needs attention" value={totals.actionCount} detail="Medium, high, or critical risk." />
-          <MetricCard icon={LineChart} label="Avg. progress" value={`${totals.avg}%`} detail="Mean goal progress across cohorts." />
+          <MetricCard icon={Users}     label="Learners"         value={totals.totalLearners} copy="Across authorized cohorts." />
+          <MetricCard icon={Flame}     label="Needs attention"  value={totals.actionCount}   copy="Medium, high, or critical risk." />
+          <MetricCard icon={LineChart} label="Avg. progress"    value={`${totals.avg}%`}     copy="Mean goal progress across cohorts." />
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_0.75fr]">
-          <motion.div
-            variants={cardV}
-            className="overflow-hidden rounded-input border border-[#ded7cd] bg-white/72 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-          >
-            <div className="flex flex-col gap-4 border-b border-[#ded7cd] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] font-extrabold uppercase text-primary">Learner support queue</p>
-                <h2 className="mt-1 font-display text-3xl font-extrabold text-text">
-                  {cohortName(active?.cohort)}
-                </h2>
-              </div>
-              <label className="flex h-11 items-center gap-2 rounded-input border border-[#d8d0c4] bg-white/80 px-3 text-sm text-muted">
-                <Search size={16} />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search learners"
-                  className="h-full bg-transparent font-medium outline-none placeholder:text-muted/70"
-                />
-              </label>
-            </div>
-            <div>
-              {filteredLearners.length > 0 ? (
-                filteredLearners.map((learner) => (
-                  <LearnerRow
-                    key={learner.learnerId}
-                    learner={learner}
-                    onFlag={handleFlag}
-                    flagging={flagging}
+          <motion.div variants={CARD_V}>
+            <Card className="overflow-hidden">
+              <div className="flex flex-col gap-4 border-b border-[#ded7cd] p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-extrabold uppercase text-primary">Learner support queue</p>
+                  <h2 className="mt-1 font-display text-3xl font-extrabold text-text">
+                    {cohortName(active?.cohort)}
+                  </h2>
+                </div>
+                <label className="flex h-11 items-center gap-2 rounded-input border border-[#d8d0c4] bg-white/80 px-3 text-sm text-muted">
+                  <Search size={16} />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search learners"
+                    className="h-full bg-transparent font-medium outline-none placeholder:text-muted/70"
                   />
-                ))
-              ) : (
-                <EmptyState
-                  icon={Search}
-                  title="No learners found."
-                  copy={query ? 'Try a different search term.' : 'Learners will appear here after they join this cohort.'}
-                />
-              )}
-            </div>
+                </label>
+              </div>
+              <div>
+                {filteredLearners.length > 0 ? (
+                  filteredLearners.map((learner) => (
+                    <LearnerRow
+                      key={learner.learnerId}
+                      learner={learner}
+                      onFlag={handleFlag}
+                      flagging={flagging}
+                    />
+                  ))
+                ) : (
+                  <EmptyState
+                    icon={Search}
+                    title="No learners found."
+                    copy={query ? 'Try a different search term.' : 'Learners will appear here after they join this cohort.'}
+                  />
+                )}
+              </div>
+            </Card>
           </motion.div>
 
-          <motion.aside variants={cardV} className="flex flex-col gap-4">
-            <div className="rounded-input border border-[#ded7cd] bg-white/72 p-5 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl">
+          <motion.aside variants={CARD_V} className="flex flex-col gap-4">
+            <Card className="p-5">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-extrabold uppercase text-primary">Risk mix</p>
                 <ShieldAlert size={20} className="text-accent" />
@@ -362,18 +369,17 @@ export default function InstructorCohortPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
-            <div className="rounded-input border border-[#ded7cd] bg-white/72 p-5 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl">
+            <Card className="p-5">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-extrabold uppercase text-primary">Weakest skills</p>
+                <p className="text-[11px] font-extrabold uppercase text-primary">Skill proficiency</p>
                 <BarChart3 size={20} className="text-accent" />
               </div>
-              <div className="mt-5 flex flex-col gap-3">
-                {(activeHeatmap?.skills ?? []).slice(0, 5).map((skill) => (
-                  <HeatBar key={skill.skillId} skill={skill} />
-                ))}
-                {(activeHeatmap?.skills ?? []).length === 0 && (
+              <div className="mt-5">
+                {(activeHeatmap?.skills ?? []).length > 0 ? (
+                  <SkillProficiencyChart skills={activeHeatmap.skills} />
+                ) : (
                   <EmptyState
                     icon={BarChart3}
                     title="No skill signal yet."
@@ -381,13 +387,14 @@ export default function InstructorCohortPage() {
                   />
                 )}
               </div>
-            </div>
+            </Card>
           </motion.aside>
         </section>
       </motion.div>
-      {flagTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-text/35 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-input border border-[#ded7cd] bg-background p-5 shadow-[0_30px_90px_rgba(26,26,26,0.25)]">
+
+      <Modal open={!!flagTarget} onClose={() => setFlagTarget(null)}>
+        {flagTarget && (
+          <>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-extrabold uppercase text-primary">Flag learner</p>
@@ -399,7 +406,7 @@ export default function InstructorCohortPage() {
               <span className="text-sm font-extrabold text-text">Follow-up note</span>
               <textarea
                 value={flagNote}
-                onChange={(event) => setFlagNote(event.target.value)}
+                onChange={(e) => setFlagNote(e.target.value)}
                 rows={5}
                 className="mt-2 w-full resize-none rounded-input border border-[#d8d0c4] bg-white px-4 py-3 text-sm leading-6 text-text outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-2 focus:ring-primary/10"
                 placeholder="What should the instructor team know?"
@@ -423,9 +430,9 @@ export default function InstructorCohortPage() {
                 Save flag
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </Shell>
   );
 }

@@ -3,19 +3,21 @@
 const supabase = require('../../config/supabase');
 
 /**
- * Return the full chat history for a learner, oldest first
+ * Return the chat history for a learner, oldest first
  * (chronological order for LLM context rebuilding).
  * @param {string} learnerId
+ * @param {{ limit?: number, offset?: number }} [page]
  * @returns {Promise<object[]>}
  */
-async function findByLearnerId(learnerId) {
+async function findByLearnerId(learnerId, { limit = 200, offset = 0 } = {}) {
   if (!learnerId) throw new Error('companion.findByLearnerId: learnerId is required');
 
   const { data, error } = await supabase
     .from('companion_messages')
     .select('*')
     .eq('learner_id', learnerId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) throw error;
   return data ?? [];

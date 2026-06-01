@@ -4,8 +4,8 @@
  * signalSweep.js
  *
  * Periodic job that scans all learners for inactivity and writes inactivity
- * struggle signals.  NOT auto-scheduled — export only, caller decides when
- * to run (e.g. cron, node-cron, or manual trigger).
+ * struggle signals.  Can be triggered via setInterval (server.js) or via
+ * the POST /api/instructor/jobs/sweep endpoint.
  *
  * Two rules:
  *   1. Stalled in-progress module: any module with status 'in_progress' or
@@ -17,17 +17,21 @@
  * Signals are deduplicated: if an unresolved inactivity signal already exists
  * for the same learner within the last 7 days, no new signal is written.
  *
+ * The N+1 is eliminated by batch-fetching all progress and recent signals
+ * for the full learner list before entering the per-learner loop.
+ *
  * Export:
  *   runSweep() → Promise<{ learnersScanned, signalsCreated: object[] }>
  */
 
-const learnersRepo   = require('../db/repositories/learners.repo');
-const progressRepo   = require('../db/repositories/progress.repo');
-const signalsRepo    = require('../db/repositories/signals.repo');
+const learnersRepo = require('../db/repositories/learners.repo');
+const progressRepo = require('../db/repositories/progress.repo');
+const signalsRepo  = require('../db/repositories/signals.repo');
+const logger       = require('../lib/logger');
 
-const STALLED_DAYS       = 7;   // in_progress module untouched for 7 days
-const NO_PROGRESS_DAYS   = 3;   // enrolled > 3 days with no real progress
-const DEDUP_WINDOW_DAYS  = 7;   // don't duplicate inactivity signals within 7 days
+const STALLED_DAYS      = 7;
+const NO_PROGRESS_DAYS  = 3;
+const DEDUP_WINDOW_DAYS = 7;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,45 +43,56 @@ function daysAgo(days) {
 
 function isOlderThan(isoString, days) {
   if (!isoString) return true;
-  const cutoff = daysAgo(days);
-  return isoString < cutoff;
+  return isoString < daysAgo(days);
 }
 
-/**
- * Check if the learner already has an unresolved inactivity signal
- * within the dedup window.
- */
-async function hasRecentInactivitySignal(learnerId) {
-  const recentSignals = await signalsRepo.findRecentByLearnerId(
-    learnerId,
-    DEDUP_WINDOW_DAYS,
-  );
-  return recentSignals.some(
-    (s) => s.signal_type === 'inactivity' && !s.resolved_at,
-  );
+function groupBy(rows, key) {
+  const map = Object.create(null);
+  for (const row of rows) {
+    const k = row[key];
+    if (!map[k]) map[k] = [];
+    map[k].push(row);
+  }
+  return map;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Run the inactivity sweep across all learners.
- *
- * @returns {Promise<{
- *   learnersScanned: number,
- *   signalsCreated: Array<{ learnerId, reason, signal }>,
- * }>}
- */
 async function runSweep() {
   const learners = await learnersRepo.findAll();
+
+  if (!learners.length) {
+    logger.info('signalSweep complete', { learnersScanned: 0, signalsCreated: 0, signalsSkipped: 0 });
+    return { learnersScanned: 0, signalsCreated: [] };
+  }
+
+  const learnerIds = learners.map((l) => l.id);
+
+  // Single batch fetch for both datasets — kills the N+1
+  const [allProgress, recentSignals] = await Promise.all([
+    progressRepo.findByLearnerIds(learnerIds),
+    signalsRepo.findRecentByLearnerIds(learnerIds, DEDUP_WINDOW_DAYS),
+  ]);
+
+  const progressByLearner = groupBy(allProgress, 'learner_id');
+
+  // Set of learner IDs that already have an unresolved inactivity signal
+  const alreadyFlagged = new Set(
+    recentSignals
+      .filter((s) => s.signal_type === 'inactivity' && !s.resolved_at)
+      .map((s) => s.learner_id),
+  );
+
   const signalsCreated = [];
+  let skipped = 0;
 
   for (const learner of learners) {
-    // Skip if learner already has a recent unresolved inactivity signal
-    if (await hasRecentInactivitySignal(learner.id)) {
+    if (alreadyFlagged.has(learner.id)) {
+      skipped++;
       continue;
     }
 
-    const progressRows = await progressRepo.findByLearnerId(learner.id);
+    const progressRows = progressByLearner[learner.id] ?? [];
 
     // Rule 1: Stalled in-progress module
     const stalledModules = progressRows.filter(
@@ -106,20 +121,18 @@ async function runSweep() {
     }
 
     // Rule 2: No progress after enrollment
-    const enrolledDaysAgo = isOlderThan(learner.enrolled_at, NO_PROGRESS_DAYS);
-    const hasRealProgress = progressRows.some(
-      (p) => p.status !== 'not_started',
-    );
+    const enrolledLongEnough = isOlderThan(learner.enrolled_at, NO_PROGRESS_DAYS);
+    const hasRealProgress    = progressRows.some((p) => p.status !== 'not_started');
 
-    if (enrolledDaysAgo && !hasRealProgress) {
+    if (enrolledLongEnough && !hasRealProgress) {
       const signal = await signalsRepo.insert({
         learner_id:  learner.id,
         signal_type: 'inactivity',
         severity:    'medium',
         source:      'system',
         context: {
-          reason:       'no_progress_after_enrollment',
-          enrolled_at:  learner.enrolled_at,
+          reason:                'no_progress_after_enrollment',
+          enrolled_at:           learner.enrolled_at,
           days_since_enrollment: NO_PROGRESS_DAYS,
         },
       });
@@ -127,10 +140,13 @@ async function runSweep() {
     }
   }
 
-  return {
+  logger.info('signalSweep complete', {
     learnersScanned: learners.length,
-    signalsCreated,
-  };
+    signalsCreated:  signalsCreated.length,
+    signalsSkipped:  skipped,
+  });
+
+  return { learnersScanned: learners.length, signalsCreated };
 }
 
 module.exports = { runSweep };

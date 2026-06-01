@@ -1,28 +1,12 @@
 'use strict';
 
-const SIGNAL_WEIGHTS = {
-  missed_deadline:   20,
-  low_score:         15,
-  repeated_attempts: 10,
-  inactivity:        25,
-  help_requested:     5,
-  instructor_flag:   30,
-};
-
-const RECENCY_WINDOW_MS  = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-const RECENCY_MULTIPLIER = 1.5;
-
-// Ordered highest to lowest so .find() returns the right level immediately.
-const LEVELS = [
-  { threshold: 75, level: 'critical' },
-  { threshold: 50, level: 'high'     },
-  { threshold: 25, level: 'medium'   },
-  { threshold:  0, level: 'low'      },
-];
+const { getRules } = require('../../config/rules');
 
 /**
  * Scores a learner's at-risk level from their unresolved struggle signals.
- * Recent signals (within 7 days) are weighted 1.5×. Score caps at 100.
+ * Recent signals (within the recency window) are weighted up. Score caps at 100.
+ * Signal weights, recency window/multiplier, and level cutoffs all come from
+ * the rules config (config/rules.js → atRisk).
  *
  * @param {{
  *   signals: Array<{ signal_type: string, created_at: string|Date, resolved_at: string|Date|null }>,
@@ -31,6 +15,8 @@ const LEVELS = [
  * @returns {{ score: number, level: 'low'|'medium'|'high'|'critical', reasons: string[] }}
  */
 function atRiskScore({ signals, now = new Date() }) {
+  const { signalWeights, recencyWindowMs, recencyMultiplier, levels } = getRules().atRisk;
+
   const nowMs  = now.getTime();
   let rawScore = 0;
   const reasons = [];
@@ -38,11 +24,11 @@ function atRiskScore({ signals, now = new Date() }) {
   for (const signal of signals) {
     if (signal.resolved_at) continue;
 
-    const baseWeight = SIGNAL_WEIGHTS[signal.signal_type] ?? 0;
+    const baseWeight = signalWeights[signal.signal_type] ?? 0;
     if (baseWeight === 0) continue;
 
     const ageMs      = nowMs - new Date(signal.created_at).getTime();
-    const multiplier = ageMs <= RECENCY_WINDOW_MS ? RECENCY_MULTIPLIER : 1;
+    const multiplier = ageMs <= recencyWindowMs ? recencyMultiplier : 1;
     rawScore        += baseWeight * multiplier;
 
     const label       = signal.signal_type.replace(/_/g, ' ');
@@ -51,7 +37,7 @@ function atRiskScore({ signals, now = new Date() }) {
   }
 
   const score     = Math.min(100, Math.round(rawScore));
-  const { level } = LEVELS.find((l) => score >= l.threshold);
+  const { level } = levels.find((l) => score >= l.threshold);
 
   return { score, level, reasons };
 }

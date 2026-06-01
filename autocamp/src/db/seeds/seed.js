@@ -1,6 +1,8 @@
 require('../../config/env');
 const supabase = require('../../config/supabase');
 
+const SEED_PASSWORD = process.env.SEED_PASSWORD || 'AtomCamp2026!';
+
 // ─── SKILLS ───────────────────────────────────────────────────────────────────
 
 const SKILLS = [
@@ -219,7 +221,7 @@ const PERSONAS = [
   // Already missed one SQL assignment deadline.
   {
     email: 'amna.malik@atomcamp.test',
-    password: 'AtomCamp2026!',
+    password: SEED_PASSWORD,
     learner: {
       name: 'Amna Malik',
       background_type: 'non_technical',
@@ -268,7 +270,10 @@ const PERSONAS = [
           assignment: 'SQL Joins Practice Set',
           deadline_missed_by_days: 3,
         },
-        created_at: '2026-05-14T08:00:00Z',
+        // Relative to seed time so it stays inside the at-risk recency window
+        // (was hardcoded to a fixed date that aged out and dropped Amna from
+        // the at-risk list once real time moved past it).
+        created_at: daysAgo(3),
       },
     ],
     messages: [
@@ -295,7 +300,7 @@ const PERSONAS = [
   // loss plateaus, confused by training dynamics. No struggle signals yet.
   {
     email: 'bilal.ahmed@atomcamp.test',
-    password: 'AtomCamp2026!',
+    password: SEED_PASSWORD,
     learner: {
       name: 'Bilal Ahmed',
       background_type: 'stem_grad',
@@ -372,7 +377,7 @@ const PERSONAS = [
   // threshold — conceptual gap on AI tools and prompt construction.
   {
     email: 'sadia.hussain@atomcamp.test',
-    password: 'AtomCamp2026!',
+    password: SEED_PASSWORD,
     learner: {
       name: 'Sadia Hussain',
       background_type: 'working_professional',
@@ -477,7 +482,7 @@ const PERSONAS = [
 
 const DEMO_INSTRUCTOR = {
   email: 'instructor@atomcamp.test',
-  password: 'AtomCamp2026!',
+  password: SEED_PASSWORD,
   name: 'Demo Instructor',
   cohorts: ['da-2026-spring', 'ai-2026-spring', 'auto-2026-spring'],
 };
@@ -647,10 +652,11 @@ async function seed() {
   console.log(`   cohorts:   ${DEMO_INSTRUCTOR.cohorts.join(', ')}`);
 
   // 5. Demo credentials
-  console.log('\n── Demo credentials ───────────────────────────────────');
-  console.log(`   Instructor: ${DEMO_INSTRUCTOR.email} / ${DEMO_INSTRUCTOR.password}`);
+  const pwSource = process.env.SEED_PASSWORD ? 'from SEED_PASSWORD env' : 'default';
+  console.log(`\n── Demo credentials (password ${pwSource}) ──────────────`);
+  console.log(`   Instructor: ${DEMO_INSTRUCTOR.email} / ${SEED_PASSWORD}`);
   for (const persona of PERSONAS) {
-    console.log(`   Student:    ${persona.email} / ${persona.password}`);
+    console.log(`   Student:    ${persona.email} / ${SEED_PASSWORD}`);
   }
 
   // 6. Row counts

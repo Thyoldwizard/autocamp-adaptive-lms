@@ -11,65 +11,49 @@
  *     2. Fetch skill by code from catalog.
  *     3. Fetch learner's skill_state for that skill.
  *     4. Call LLM (with rules fallback) to generate 4 MCQ questions.
- *     5. Store correct answers in an in-memory session map keyed by UUID.
+ *     5. Persist session (with full questions incl. correctIndex) in checkin_sessions.
  *     6. Return questions WITHOUT correct answers.
  *
  *   submitCheckin(learnerId, skillCode, sessionId, answers)
- *     1. Look up session by sessionId — 400 if missing.
- *     2. Score answers against stored correct answers.
- *     3. Update skill_state proficiency via repo.
- *     4. Call recordActivity with score.
- *     5. Delete session from map.
- *     6. Return { score, updatedProficiency, signalsCreated }.
+ *     1. Opportunistically purge expired DB sessions.
+ *     2. Look up session by sessionId — 400 if missing or expired.
+ *     3. Verify session belongs to this learner and skill.
+ *     4. Score answers against stored correct answers.
+ *     5. Update skill_state proficiency via repo.
+ *     6. Call recordActivity with score.
+ *     7. Delete session from DB.
+ *     8. Return { score, updatedProficiency, signalsCreated }.
  *
- * In-memory session map:
- *   Map<sessionId, { learnerId, skillId, skillCode, questions: [{question, options, correctIndex, explanation}], createdAt }>
- *
- * Sessions expire after 30 minutes (checked on submit).
+ * Session TTL comes from getRules().checkin.sessionTtlMs.
  */
 
 const crypto                      = require('crypto');
 const learnersRepo                = require('../db/repositories/learners.repo');
 const skillsRepo                  = require('../db/repositories/skills.repo');
 const skillStateRepo              = require('../db/repositories/skillState.repo');
+const checkinSessionsRepo         = require('../db/repositories/checkinSessions.repo');
 const { recordActivity }          = require('./dashboard.service');
 const llm                         = require('./llm');
 const { buildCheckinPrompt, parseCheckinResponse, FALLBACK_QUESTIONS } =
   require('./llm/prompts/checkin.prompt');
 const { NotFoundError, BadRequestError } = require('../lib/errors');
+const { getRules }                = require('../config/rules');
 
-// ─── In-memory session store ─────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
-
-/**
- * @type {Map<string, {
- *   learnerId: string,
- *   skillId: string,
- *   skillCode: string,
- *   questions: Array<{ question: string, options: string[], correctIndex: number, explanation: string }>,
- *   createdAt: number,
- * }>}
- */
-const sessions = new Map();
-
-/**
- * Generate a UUID v4 for session IDs.
- */
 function generateSessionId() {
   return crypto.randomUUID();
 }
 
 /**
- * Purge expired sessions (older than SESSION_TTL_MS).
- * Called opportunistically on each submit.
+ * Opportunistically delete expired sessions from the DB.
+ * Called on each submit; errors are swallowed so they never block the caller.
  */
-function purgeExpiredSessions() {
-  const now = Date.now();
-  for (const [id, session] of sessions) {
-    if (now - session.createdAt > SESSION_TTL_MS) {
-      sessions.delete(id);
-    }
+async function purgeExpiredSessions() {
+  try {
+    await checkinSessionsRepo.purgeExpired();
+  } catch {
+    // Non-critical cleanup — don't let it surface to callers.
   }
 }
 
@@ -108,21 +92,24 @@ async function startCheckin(learnerId, skillCode) {
   const proficiency = existingState ? Number(existingState.proficiency) : 0;
 
   // 4. Generate questions via LLM (with fallback)
-  let questions = await generateQuestions(learner, skill, proficiency);
+  const questions = await generateQuestions(learner, skill, proficiency);
 
-  // 5. Create session and store correct answers
+  // 5. Persist session with correct answers
   const sessionId = generateSessionId();
-  sessions.set(sessionId, {
-    learnerId,
-    skillId: skill.id,
-    skillCode: skill.code,
+  const ttlMs = getRules().checkin.sessionTtlMs;
+
+  await checkinSessionsRepo.create({
+    id: sessionId,
+    learner_id: learnerId,
+    skill_id: skill.id,
+    skill_code: skill.code,
     questions: questions.map((q) => ({
       question: q.question,
       options: q.options,
       correctIndex: q.correctIndex,
       explanation: q.explanation,
     })),
-    createdAt: Date.now(),
+    expires_at: new Date(Date.now() + ttlMs).toISOString(),
   });
 
   // 6. Return questions WITHOUT correct answers
@@ -170,24 +157,24 @@ async function submitCheckin(learnerId, skillCode, sessionId, answers) {
     throw new BadRequestError('answers array is required');
   }
 
-  // Opportunistically purge expired sessions
+  // 1. Opportunistically purge expired sessions (fire-and-forget)
   purgeExpiredSessions();
 
-  // 1. Look up session
-  const session = sessions.get(sessionId);
+  // 2. Look up session (repo returns null if missing or expired)
+  const session = await checkinSessionsRepo.findById(sessionId);
   if (!session) {
     throw new BadRequestError('Invalid or expired session. Start a new check-in.');
   }
 
-  // Verify session belongs to this learner and skill
-  if (session.learnerId !== learnerId) {
+  // 3. Verify session belongs to this learner and skill
+  if (session.learner_id !== learnerId) {
     throw new BadRequestError('Session does not belong to this learner.');
   }
-  if (session.skillCode !== skillCode) {
+  if (session.skill_code !== skillCode) {
     throw new BadRequestError('Session does not match the requested skill.');
   }
 
-  // 2. Score answers
+  // 4. Score answers
   const totalQuestions = session.questions.length;
   if (answers.length !== totalQuestions) {
     throw new BadRequestError(
@@ -204,25 +191,29 @@ async function submitCheckin(learnerId, skillCode, sessionId, answers) {
 
   const score = Math.round((correctAnswers / totalQuestions) * 100);
 
-  // 3. Update proficiency
-  const delta = score >= 75 ? 0.08 : score >= 50 ? 0.02 : -0.05;
-  const currentProficiency = await getCurrentProficiency(learnerId, session.skillId);
+  // 5. Update proficiency
+  const { highScoreCutoff, midScoreCutoff, highScore, midScore, lowScore } =
+    getRules().checkin.proficiencyDelta;
+  const delta = score >= highScoreCutoff ? highScore
+              : score >= midScoreCutoff  ? midScore
+              :                            lowScore;
+  const currentProficiency = await getCurrentProficiency(learnerId, session.skill_id);
   const newProficiency = Math.max(0, Math.min(1, currentProficiency + delta));
 
-  await skillStateRepo.updateProficiency(learnerId, session.skillId, {
+  await skillStateRepo.updateProficiency(learnerId, session.skill_id, {
     proficiency: newProficiency,
     last_assessed_at: new Date().toISOString(),
   });
 
-  // 4. Record activity (find a relevant module for this skill)
+  // 6. Record activity
   const signalsCreated = await recordActivityForCheckin(
     learnerId,
-    session.skillId,
+    session.skill_id,
     score,
   );
 
-  // 5. Delete session
-  sessions.delete(sessionId);
+  // 7. Delete session from DB
+  await checkinSessionsRepo.deleteById(sessionId);
 
   return {
     score,
@@ -241,17 +232,11 @@ async function submitCheckin(learnerId, skillCode, sessionId, answers) {
   };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Private helpers ──────────────────────────────────────────────────────────
 
-/**
- * Generate MCQ questions via LLM, with retry and fallback.
- *
- * @param {object} learner
- * @param {object} skill
- * @param {number} proficiency
- * @returns {Promise<Array<{question, options, correctIndex}>>}
- */
 async function generateQuestions(learner, skill, proficiency) {
+  const { minQuestions, maxQuestions } = getRules().checkin;
+
   const prompt = buildCheckinPrompt({
     learner,
     skill,
@@ -262,8 +247,8 @@ async function generateQuestions(learner, skill, proficiency) {
   try {
     const raw = await llm.generate(prompt);
     const parsed = parseCheckinResponse(raw);
-    if (parsed && parsed.length >= 2) {
-      return parsed.slice(0, 4);
+    if (parsed && parsed.length >= minQuestions) {
+      return parsed.slice(0, maxQuestions);
     }
   } catch {
     // LLM failed — fall through to retry then fallback
@@ -273,58 +258,33 @@ async function generateQuestions(learner, skill, proficiency) {
   try {
     const raw = await llm.generate(prompt);
     const parsed = parseCheckinResponse(raw);
-    if (parsed && parsed.length >= 2) {
-      return parsed.slice(0, 4);
+    if (parsed && parsed.length >= minQuestions) {
+      return parsed.slice(0, maxQuestions);
     }
   } catch {
     // Second failure — fall through to fallback
   }
 
-  // Fallback: hardcoded questions for this skill
   const fallback = FALLBACK_QUESTIONS[skill.code] ?? FALLBACK_QUESTIONS.sql;
   return fallback;
 }
 
-/**
- * Get current proficiency for a learner-skill pair.
- *
- * @param {string} learnerId
- * @param {string} skillId
- * @returns {Promise<number>}
- */
 async function getCurrentProficiency(learnerId, skillId) {
   const state = await skillStateRepo.findByLearnerAndSkillId(learnerId, skillId);
   return state ? Number(state.proficiency) : 0;
 }
 
-/**
- * Record check-in activity. Since check-ins are skill-scoped (not module-scoped),
- * we record activity against a synthetic "check-in" event.
- *
- * @param {string} learnerId
- * @param {string} skillId
- * @param {number} score
- * @returns {Promise<object[]>}
- */
 async function recordActivityForCheckin(learnerId, skillId, score) {
-  // Check-in is a skill-level event, not module-level.
-  // We still call recordActivity but without a module — it will create
-  // signals if the score triggers struggle detectors.
-  // Since recordActivity requires a moduleId, we use the skillId as a proxy.
-  // This is a pragmatic choice — in a future iteration we could add a
-  // dedicated check-in activity table.
   try {
     const result = await recordActivity(learnerId, skillId, {
       attempts: 1,
       score,
-      timeSpentMinutes: 5,
+      timeSpentMinutes: getRules().checkin.activityTimeMinutes,
     });
     return result.signalsCreated ?? [];
   } catch {
-    // If recordActivity fails (e.g., no module row for this skillId),
-    // we still return the check-in result — signals are non-critical.
     return [];
   }
 }
 
-module.exports = { startCheckin, submitCheckin, sessions };
+module.exports = { startCheckin, submitCheckin };

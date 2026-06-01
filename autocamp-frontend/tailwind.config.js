@@ -40,11 +40,11 @@ module.exports = {
       // ── Animation durations ────────────────────────────────────────────────
       // Used as: duration-micro, duration-fast, duration-base, duration-slow, duration-reveal
       transitionDuration: {
-        micro:  "200",
-        fast:   "400",
-        base:   "600",
-        slow:   "900",
-        reveal: "1200",
+        micro:  "200ms",
+        fast:   "400ms",
+        base:   "600ms",
+        slow:   "900ms",
+        reveal: "1200ms",
       },
     },
   },

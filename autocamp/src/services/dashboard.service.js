@@ -16,12 +16,12 @@ const { getLearnerModel }    = require('./learnerModel.service');
 const progressRepo           = require('../db/repositories/progress.repo');
 const signalsRepo            = require('../db/repositories/signals.repo');
 const { detectSignals }      = require('./rules/struggleDetectors');
+const { getRules }           = require('../config/rules');
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const STRONG_THRESHOLD    = 0.7;   // proficiency >= this → strong
-const DEVELOPING_MIN      = 0.4;   // 0.4 <= proficiency < 0.7 → developing
-// below DEVELOPING_MIN and > 0 → weak;  exactly 0 → not_started
+// Proficiency bands come from the shared rules config (config/rules.js → bands):
+//   proficiency >= strong              → strong
+//   developing <= proficiency < strong → developing
+//   0 < proficiency < developing       → weak;  exactly 0 → not_started
 
 // ─── Shape helpers ────────────────────────────────────────────────────────────
 
@@ -68,6 +68,7 @@ function findCurrentModule(progress) {
  * @param {object[]} skillState - repo rows with nested skill join
  */
 function bucketSkills(skillState) {
+  const { strong: STRONG_THRESHOLD } = getRules().bands;
   const strong     = [];
   const weak       = [];
   const notStarted = [];
@@ -95,6 +96,7 @@ function bucketSkills(skillState) {
  * @returns {{ strong: object[], developing: object[], weak: object[] }}
  */
 function groupSkillsByBand(skillState) {
+  const { strong: STRONG_THRESHOLD, developing: DEVELOPING_MIN } = getRules().bands;
   const strong     = [];
   const developing = [];
   const weak       = [];
@@ -245,6 +247,13 @@ async function recordActivity(learnerId, moduleId, event) {
   }
 
   // ── 1. Upsert progress ───────────────────────────────────────────────────
+  // started_at must be stamped only when the (learner, module) row is first
+  // created. The upsert merges every supplied column, so sending started_at
+  // unconditionally would overwrite the original start time on every follow-up
+  // activity event. Look up the existing row and only include started_at when
+  // there isn't one yet.
+  const existing = await progressRepo.findByLearnerAndModule(learnerId, moduleId);
+
   const progressRow = await progressRepo.upsert({
     learner_id:          learnerId,
     module_id:           moduleId,
@@ -254,8 +263,7 @@ async function recordActivity(learnerId, moduleId, event) {
     ...(score             !== undefined && { last_score:           score }),
     ...(timeSpentMinutes  !== undefined && { time_spent_minutes:   timeSpentMinutes }),
     ...(completed_at                    && { completed_at }),
-    // started_at only on first insert — upsert will keep existing value if row already exists
-    started_at: new Date().toISOString(),
+    ...(existing                        ? {} : { started_at: new Date().toISOString() }),
   });
 
   // ── 2. Run struggle detectors (pure, synchronous) ────────────────────────

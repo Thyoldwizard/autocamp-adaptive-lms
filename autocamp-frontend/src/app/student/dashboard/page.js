@@ -1,41 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
   ArrowRight,
   BarChart3,
-  BookOpenCheck,
+  Bot,
   Brain,
   Clock,
   GraduationCap,
   MessageSquareText,
   RefreshCw,
   Target,
+  BookOpenCheck,
+  TrendingUp,
+  User,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { get } from '@/lib/api';
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+} from 'recharts';
 import { EmptyState, PageSkeleton, StudentShell } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
-
-const RISK = {
-  low: { label: 'Low risk', cls: 'bg-primary/10 text-primary' },
-  medium: { label: 'Medium risk', cls: 'bg-accent/20 text-[#9b5f1e]' },
-  high: { label: 'High risk', cls: 'bg-danger/10 text-danger' },
-  critical: { label: 'Critical risk', cls: 'bg-red-100 text-red-700' },
-};
-
-const cardV = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
-};
-
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
+import { Card, MetricCard, RiskBadge } from '@/components/ui';
+import { EASE_OUT, CARD_V, CONTAINER_V } from '@/lib/constants';
+import { useFetch } from '@/hooks/useFetch';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -85,6 +77,15 @@ function ErrorState({ error, onRetry }) {
   );
 }
 
+function getDynamicHeadline(firstName, pct, riskLevel) {
+  if (riskLevel === 'high' || riskLevel === 'critical') {
+    return `${firstName}, this week is the one that matters.`;
+  }
+  if (pct >= 70) return 'Strong momentum. The path is working.';
+  if (pct >= 40) return `${pct}% to goal — the gap is closeable.`;
+  return 'Your adaptive path is gathering signal.';
+}
+
 function GoalRing({ pct = 0 }) {
   const r = 46;
   const c = 2 * Math.PI * r;
@@ -115,26 +116,6 @@ function GoalRing({ pct = 0 }) {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, copy }) {
-  return (
-    <motion.div
-      variants={cardV}
-      className="rounded-input border border-[#ded7cd] bg-white/72 p-5 shadow-[0_20px_70px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-extrabold uppercase text-muted">{label}</p>
-          <p className="mt-2 font-display text-4xl font-extrabold text-text">{value}</p>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-input bg-primary/10 text-primary">
-          <Icon size={22} />
-        </div>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-muted">{copy}</p>
-    </motion.div>
-  );
-}
-
 function SkillPills({ title, items = [], type }) {
   const cls =
     type === 'strong'
@@ -158,71 +139,99 @@ function SkillPills({ title, items = [], type }) {
   );
 }
 
+function SparkTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-input border border-[#ded7cd] bg-white px-3 py-2 text-xs font-extrabold text-primary shadow-card">
+      {label}: {payload[0].value}%
+    </div>
+  );
+}
+
+function ProgressSparkline({ data = [] }) {
+  if (!data.length) return null;
+  const id = 'spark-gradient';
+  return (
+    <motion.div variants={CARD_V}>
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-extrabold uppercase text-primary">Goal progress over time</p>
+          <TrendingUp size={22} className="text-accent" />
+        </div>
+        <div className="mt-4" style={{ height: 120 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+              <defs>
+                <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#2D6A4F" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#2D6A4F" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="week" tick={{ fontSize: 11, fontWeight: 700, fill: '#9b8f83' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<SparkTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="pct"
+                stroke="#2D6A4F"
+                strokeWidth={2.5}
+                fill={`url(#${id})`}
+                dot={false}
+                activeDot={{ r: 4, fill: '#2D6A4F', stroke: 'white', strokeWidth: 2 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function DashboardPage() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  function load() {
-    setLoading(true);
-    setError('');
-
-    get('/student/dashboard')
-      .then(setData)
-      .catch((err) => setError(err.message || 'Could not load dashboard'))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const { data, loading, error, reload: load } = useFetch('/student/dashboard', 'Could not load dashboard');
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={error} onRetry={load} />;
   if (!data) return null;
 
-  const { learner, journey, skills, atRisk, goalProgress, recentActivity } = data;
+  const { learner, journey, skills, atRisk, goalProgress, recentActivity, progressHistory } = data;
   const firstName = (learner?.name ?? learner?.email ?? 'Learner').split(' ')[0];
   const pct = goalProgress?.percentage ?? 0;
   const riskLevel = typeof atRisk === 'string' ? atRisk : atRisk?.level ?? 'low';
-  const risk = RISK[riskLevel] ?? RISK.low;
   const action = journey?.nextBestAction ?? {};
   const summary = journey?.progressSummary ?? {};
   const days = daysSince(learner?.enrolledAt ?? learner?.created_at ?? learner?.createdAt);
 
   return (
     <Shell>
-      <motion.div variants={container} initial="hidden" animate="show">
-        <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_0.62fr] lg:items-stretch">
-          <motion.div
-            variants={cardV}
-            className="rounded-input border border-[#ded7cd] bg-white/72 p-6 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl sm:p-8"
-          >
-            <p className="mb-4 text-xs font-extrabold uppercase text-primary">
-              {getGreeting()}, {firstName}
-            </p>
-            <h1 className="font-display text-5xl font-extrabold leading-[0.96] text-text sm:text-7xl">
-              Your adaptive path is live.
-            </h1>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
-              {learner?.program}
-              {learner?.cohort ? ` · ${learner.cohort}` : ''}
-            </p>
-            <div className="mt-7 flex flex-wrap gap-2">
-              <span className={`rounded-badge px-3 py-1.5 text-xs font-extrabold ${risk.cls}`}>
-                {risk.label}
-              </span>
-              {days !== null && (
-                <span className="inline-flex items-center gap-2 rounded-badge bg-white px-3 py-1.5 text-xs font-extrabold text-muted shadow-card">
-                  <Clock size={12} />
-                  Day {days}
-                </span>
-              )}
-            </div>
+      <motion.div variants={CONTAINER_V} initial="hidden" animate="show">
+        <section className="relative mt-10 grid gap-6 lg:grid-cols-[1fr_0.62fr] lg:items-stretch">
+          <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-accent/12 blur-3xl" aria-hidden="true" />
+          <motion.div variants={CARD_V}>
+            <Card className="p-6 sm:p-8">
+              <p className="mb-4 text-xs font-extrabold uppercase text-primary">
+                {getGreeting()}, {firstName}
+              </p>
+              <h1 className="font-display text-5xl font-extrabold leading-[0.96] text-text sm:text-7xl">
+                {getDynamicHeadline(firstName, pct, riskLevel)}
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-8 text-muted">
+                {learner?.program}
+                {learner?.cohort ? ` · ${learner.cohort}` : ''}
+              </p>
+              <div className="mt-7 flex flex-wrap gap-2">
+                <RiskBadge level={riskLevel} />
+                {days !== null && (
+                  <span className="inline-flex items-center gap-2 rounded-badge bg-white px-3 py-1.5 text-xs font-extrabold text-muted shadow-card">
+                    <Clock size={12} />
+                    Day {days}
+                  </span>
+                )}
+              </div>
+            </Card>
           </motion.div>
 
           <motion.div
-            variants={cardV}
+            variants={CARD_V}
             className="flex flex-col justify-between rounded-input bg-primary p-6 text-white shadow-[0_24px_80px_rgba(45,37,24,0.12)] sm:p-8"
           >
             <div className="flex items-center justify-between">
@@ -239,115 +248,104 @@ export default function DashboardPage() {
         </section>
 
         <section id="progress" className="mt-6 grid scroll-mt-8 gap-4 rounded-input transition-shadow md:grid-cols-3">
-          <MetricCard
-            icon={BookOpenCheck}
-            label="Completed"
-            value={summary.completed ?? 0}
-            copy="Modules already finished."
-          />
-          <MetricCard
-            icon={BarChart3}
-            label="In progress"
-            value={summary.inProgress ?? 0}
-            copy="Active or stalled modules."
-          />
-          <MetricCard
-            icon={GraduationCap}
-            label="Not started"
-            value={summary.notStarted ?? 0}
-            copy="Still waiting in the path."
-          />
+          <MetricCard icon={BookOpenCheck} label="Completed"   value={summary.completed ?? 0}   copy="Modules already finished." />
+          <MetricCard icon={BarChart3}     label="In progress" value={summary.inProgress ?? 0}  copy="Active or stalled modules." />
+          <MetricCard icon={GraduationCap} label="Not started" value={summary.notStarted ?? 0}  copy="Still waiting in the path." />
         </section>
 
+        {progressHistory?.length > 0 && <ProgressSparkline data={progressHistory} />}
+
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.82fr]">
-          <motion.div
-            variants={cardV}
-            className="rounded-input border border-[#ded7cd] bg-white/72 p-6 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-          >
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-[11px] font-extrabold uppercase text-primary">Up next</p>
-                <h2 className="mt-2 font-display text-4xl font-extrabold leading-tight text-text">
-                  {action.moduleName ?? action.moduleCode ?? journey?.currentModule?.moduleName ?? 'No module assigned yet'}
-                </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">
-                  {action.reason ?? 'Your next module will appear here once the learner model has enough signal.'}
-                </p>
+          <motion.div variants={CARD_V}>
+            <Card className="p-6">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-extrabold uppercase text-primary">Up next</p>
+                  <h2 className="mt-2 font-display text-4xl font-extrabold leading-tight text-text">
+                    {action.moduleName ?? action.moduleCode ?? journey?.currentModule?.moduleName ?? 'No module assigned yet'}
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-muted">
+                    {action.reason ?? 'Your next module will appear here once the learner model has enough signal.'}
+                  </p>
+                </div>
+                <Link
+                  href="/student/skills"
+                  className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
+                >
+                  Skill map
+                  <ArrowRight size={15} />
+                </Link>
               </div>
-              <Link
-                href="/student/skills"
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
-              >
-                Skill map
-                <ArrowRight size={15} />
-              </Link>
-            </div>
+            </Card>
           </motion.div>
 
-          <motion.div
-            variants={cardV}
-            className="rounded-input border border-[#ded7cd] bg-white/72 p-6 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-extrabold uppercase text-primary">Companion</p>
-              <MessageSquareText size={22} className="text-accent" />
-            </div>
-            <p className="mt-4 text-sm leading-7 text-muted">
-              Ask for an explanation, a practice plan, or help with a weak area.
-            </p>
-            <Link
-              href="/student/companion"
-              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
-            >
-              Open companion
-              <ArrowRight size={15} />
-            </Link>
+          <motion.div variants={CARD_V}>
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-extrabold uppercase text-primary">Companion</p>
+                <MessageSquareText size={22} className="text-accent" />
+              </div>
+              <p className="mt-4 text-sm leading-7 text-muted">
+                Ask for an explanation, a practice plan, or help with a weak area.
+              </p>
+              <Link
+                href="/student/companion"
+                className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
+              >
+                Open companion
+                <ArrowRight size={15} />
+              </Link>
+            </Card>
           </motion.div>
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <motion.div
-            variants={cardV}
-            className="rounded-input border border-[#ded7cd] bg-white/72 p-6 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-extrabold uppercase text-primary">Skill snapshot</p>
-              <Brain size={22} className="text-accent" />
-            </div>
-            <div className="mt-5 flex flex-col gap-5">
-              <SkillPills title="Strong" items={skills?.strong ?? []} type="strong" />
-              <SkillPills title="Developing" items={skills?.developing ?? skills?.weak ?? []} type="developing" />
-              <SkillPills title="Not started" items={skills?.notStarted ?? []} type="weak" />
-            </div>
+          <motion.div variants={CARD_V}>
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-extrabold uppercase text-primary">Skill snapshot</p>
+                <Brain size={22} className="text-accent" />
+              </div>
+              <div className="mt-5 flex flex-col gap-5">
+                <SkillPills title="Strong"      items={skills?.strong ?? []}                          type="strong" />
+                <SkillPills title="Developing"  items={skills?.developing ?? skills?.weak ?? []}      type="developing" />
+                <SkillPills title="Not started" items={skills?.notStarted ?? []}                      type="weak" />
+              </div>
+            </Card>
           </motion.div>
 
-          <motion.div
-            variants={cardV}
-            className="rounded-input border border-[#ded7cd] bg-white/72 p-6 shadow-[0_24px_80px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-extrabold uppercase text-primary">Recent activity</p>
-              <Clock size={22} className="text-accent" />
-            </div>
-            <div className="mt-5 divide-y divide-[#ded7cd]">
-              {(recentActivity ?? []).slice(0, 5).map((item, index) => (
-                <div key={`${item.created_at ?? item.createdAt ?? index}`} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <p className="line-clamp-1 text-sm font-medium text-text">
-                    {item.content ?? item.message ?? item.response ?? ''}
-                  </p>
-                  <span className="shrink-0 text-xs font-bold uppercase text-muted">
-                    {formatTime(item.createdAt ?? item.created_at ?? item.timestamp)}
-                  </span>
-                </div>
-              ))}
-              {(recentActivity ?? []).length === 0 && (
-                <EmptyState
-                  icon={Clock}
-                  title="No activity yet."
-                  copy="Your companion messages and learning events will appear here once you start working."
-                />
-              )}
-            </div>
+          <motion.div variants={CARD_V}>
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-extrabold uppercase text-primary">Recent activity</p>
+                <Clock size={22} className="text-accent" />
+              </div>
+              <div className="mt-5 divide-y divide-[#ded7cd]">
+                {(recentActivity ?? []).slice(0, 5).map((item, index) => {
+                  const isBot = item.role === 'assistant';
+                  return (
+                    <div key={`${item.created_at ?? item.createdAt ?? index}`} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] ${isBot ? 'bg-primary text-white' : 'bg-accent/20 text-primary'}`}>
+                        {isBot ? <Bot size={11} /> : <User size={11} />}
+                      </div>
+                      <p className="line-clamp-2 flex-1 text-sm font-medium leading-6 text-text">
+                        {item.content ?? item.message ?? item.response ?? ''}
+                      </p>
+                      <span className="shrink-0 text-xs font-bold uppercase text-muted">
+                        {formatTime(item.createdAt ?? item.created_at ?? item.timestamp)}
+                      </span>
+                    </div>
+                  );
+                })}
+                {(recentActivity ?? []).length === 0 && (
+                  <EmptyState
+                    icon={Clock}
+                    title="No activity yet."
+                    copy="Your companion messages and learning events will appear here once you start working."
+                  />
+                )}
+              </div>
+            </Card>
           </motion.div>
         </section>
       </motion.div>

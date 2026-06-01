@@ -17,8 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { get, post } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
 import { PageSkeleton, StudentShell } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
+import { EASE_OUT } from '@/lib/constants';
 
 const BACKGROUNDS = [
   {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -8,47 +8,37 @@ import {
   BarChart3,
   BookOpenCheck,
   Brain,
-  CheckCircle2,
+  Database,
+  Globe,
   RefreshCw,
   Search,
   Sparkles,
+  Terminal,
+  Wrench,
 } from 'lucide-react';
+
+const DOMAIN_ICON = {
+  data:        Database,
+  analytics:   BarChart3,
+  programming: Terminal,
+  tools:       Wrench,
+  ml:          Brain,
+  ai:          Sparkles,
+};
 import { motion } from 'framer-motion';
-import { get } from '@/lib/api';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  Cell,
+} from 'recharts';
 import { EmptyState, PageSkeleton, StudentShell } from '@/components/AppShell';
-
-const EASE_OUT = [0.16, 1, 0.3, 1];
-
-const bandMeta = {
-  strong: {
-    title: 'Strong',
-    copy: 'Skills you can lean on right now.',
-    icon: CheckCircle2,
-    cls: 'bg-primary/10 text-primary',
-  },
-  developing: {
-    title: 'Developing',
-    copy: 'Useful skills that are becoming reliable.',
-    icon: BarChart3,
-    cls: 'bg-accent/20 text-[#9b5f1e]',
-  },
-  weak: {
-    title: 'Needs practice',
-    copy: 'Good candidates for check-ins and focused practice.',
-    icon: Brain,
-    cls: 'bg-danger/10 text-danger',
-  },
-};
-
-const cardV = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
-};
-
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
+import { Card, ProgressBar } from '@/components/ui';
+import { CARD_V, CONTAINER_V, BAND } from '@/lib/constants';
+import { useFetch } from '@/hooks/useFetch';
 
 function pct(value) {
   return Math.round((Number(value) || 0) * 100);
@@ -81,23 +71,27 @@ function ErrorState({ error, onRetry }) {
 }
 
 function SkillCard({ skill, band }) {
-  const meta = bandMeta[band];
+  const meta = BAND[band];
   const value = pct(skill.proficiency);
+  const DomainIcon = DOMAIN_ICON[skill.domain?.toLowerCase()] ?? Globe;
 
   return (
-    <div className="rounded-input border border-[#ded7cd] bg-white/74 p-4 shadow-card backdrop-blur-xl">
+    <Card variant="flat" className="p-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-display text-xl font-extrabold text-text">{skill.name ?? skill.code}</p>
-          <p className="mt-1 text-xs font-bold uppercase text-muted">{skill.domain ?? skill.code}</p>
+        <div className="flex items-start gap-3">
+          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-input ${meta.cls}`}>
+            <DomainIcon size={14} />
+          </div>
+          <div>
+            <p className="font-display text-xl font-extrabold text-text">{skill.name ?? skill.code}</p>
+            <p className="mt-0.5 text-xs font-bold uppercase text-muted">{skill.domain ?? skill.code}</p>
+          </div>
         </div>
-        <span className={`rounded-badge px-3 py-1.5 text-xs font-extrabold ${meta.cls}`}>
+        <span className={`shrink-0 rounded-badge px-3 py-1.5 text-xs font-extrabold ${meta.cls}`}>
           {value}%
         </span>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-badge bg-[#e5ded4]">
-        <div className="h-full rounded-badge bg-primary" style={{ width: `${value}%` }} />
-      </div>
+      <ProgressBar value={value} className="mt-4" />
       <div className="mt-4 flex items-center justify-between gap-3">
         <span className="text-sm leading-6 text-muted">
           {value >= 70 ? 'Ready to apply in projects.' : value >= 40 ? 'Keep building consistency.' : 'Needs focused practice.'}
@@ -110,17 +104,17 @@ function SkillCard({ skill, band }) {
           <ArrowRight size={13} />
         </Link>
       </div>
-    </div>
+    </Card>
   );
 }
 
 function BandColumn({ band, items }) {
-  const meta = bandMeta[band];
+  const meta = BAND[band];
   const Icon = meta.icon;
 
   return (
     <motion.section
-      variants={cardV}
+      variants={CARD_V}
       className="rounded-input border border-[#ded7cd] bg-white/58 p-4 shadow-[0_20px_70px_rgba(45,37,24,0.08)] backdrop-blur-2xl"
     >
       <div className="flex items-start gap-3">
@@ -147,25 +141,72 @@ function BandColumn({ band, items }) {
   );
 }
 
+function barColor(proficiency) {
+  if (proficiency >= 0.7) return '#2D6A4F';
+  if (proficiency >= 0.4) return '#F4A261';
+  return '#E63946';
+}
+
+function SkillsBarTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-input border border-[#ded7cd] bg-white px-3 py-2 text-xs font-extrabold text-primary shadow-card">
+      {payload[0].payload.name}: {Math.round(payload[0].value * 100)}%
+    </div>
+  );
+}
+
+function AllSkillsChart({ strong = [], developing = [], weak = [] }) {
+  const allSkills = [...strong, ...developing, ...weak].filter((s) => s.proficiency > 0 || s.proficiency === 0);
+  if (allSkills.length === 0) return null;
+
+  const chartHeight = Math.min(allSkills.length * 44, 400);
+
+  return (
+    <motion.div variants={CARD_V}>
+      <Card className="mt-6 p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-extrabold uppercase text-primary">All skills — proficiency overview</p>
+          <BarChart3 size={20} className="text-accent" />
+        </div>
+        <div className="mt-5 overflow-y-auto" style={{ maxHeight: 400 }}>
+          <div style={{ height: chartHeight }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={allSkills} margin={{ top: 0, right: 16, bottom: 0, left: 0 }}>
+                <XAxis
+                  type="number"
+                  domain={[0, 1]}
+                  tickFormatter={(v) => `${Math.round(v * 100)}%`}
+                  tick={{ fontSize: 11, fontWeight: 700, fill: '#9b8f83' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={110}
+                  tick={{ fontSize: 12, fontWeight: 700, fill: '#2c2410' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<SkillsBarTooltip />} cursor={{ fill: 'rgba(45,106,79,0.06)' }} />
+                <Bar dataKey="proficiency" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                  {allSkills.map((skill) => (
+                    <Cell key={skill.skillId ?? skill.code} fill={barColor(skill.proficiency)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function StudentSkillsPage() {
-  const [data, setData] = useState(null);
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  function load() {
-    setLoading(true);
-    setError('');
-
-    get('/student/skills')
-      .then(setData)
-      .catch((err) => setError(err.message || 'Could not load skills'))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  const { data, loading, error, reload: load } = useFetch('/student/skills', 'Could not load skills');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -184,20 +225,20 @@ export default function StudentSkillsPage() {
 
   const totals = data
     ? {
-        all: (data.strong?.length ?? 0) + (data.developing?.length ?? 0) + (data.weak?.length ?? 0),
-        strong: data.strong?.length ?? 0,
+        all:      (data.strong?.length ?? 0) + (data.developing?.length ?? 0) + (data.weak?.length ?? 0),
+        strong:   data.strong?.length ?? 0,
         practice: (data.developing?.length ?? 0) + (data.weak?.length ?? 0),
       }
     : { all: 0, strong: 0, practice: 0 };
 
   if (loading) return <LoadingState />;
-  if (error) return <ErrorState error={error} onRetry={load} />;
+  if (error)   return <ErrorState error={error} onRetry={load} />;
 
   return (
     <Shell>
-      <motion.div variants={container} initial="hidden" animate="show">
+      <motion.div variants={CONTAINER_V} initial="hidden" animate="show">
         <section className="mt-10 grid gap-8 lg:grid-cols-[1fr_0.78fr] lg:items-end">
-          <motion.div variants={cardV}>
+          <motion.div variants={CARD_V}>
             <p className="mb-4 text-xs font-extrabold uppercase text-primary">Skill map</p>
             <h1 className="font-display text-5xl font-extrabold leading-[0.96] text-text sm:text-7xl">
               Know where to push next.
@@ -209,7 +250,7 @@ export default function StudentSkillsPage() {
           </motion.div>
 
           <motion.div
-            variants={cardV}
+            variants={CARD_V}
             className="rounded-input border border-[#ded7cd] bg-primary p-5 text-white shadow-[0_24px_80px_rgba(45,37,24,0.12)]"
           >
             <div className="flex items-center justify-between">
@@ -233,7 +274,7 @@ export default function StudentSkillsPage() {
           </motion.div>
         </section>
 
-        <motion.div variants={cardV} className="mt-8 flex items-center gap-2 rounded-input border border-[#ded7cd] bg-white/74 px-4 shadow-card backdrop-blur-xl">
+        <motion.div variants={CARD_V} className="mt-8 flex items-center gap-2 rounded-input border border-[#ded7cd] bg-white/74 px-4 shadow-card backdrop-blur-xl">
           <Search size={17} className="text-muted" />
           <input
             value={query}
@@ -244,30 +285,31 @@ export default function StudentSkillsPage() {
         </motion.div>
 
         <div className="mt-6 grid gap-5 lg:grid-cols-3">
-          <BandColumn band="strong" items={filtered.strong} />
+          <BandColumn band="strong"     items={filtered.strong} />
           <BandColumn band="developing" items={filtered.developing} />
-          <BandColumn band="weak" items={filtered.weak} />
+          <BandColumn band="weak"       items={filtered.weak} />
         </div>
 
-        <motion.div
-          variants={cardV}
-          className="mt-6 rounded-input border border-[#ded7cd] bg-white/70 p-5 shadow-card backdrop-blur-xl"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[11px] font-extrabold uppercase text-primary">Companion support</p>
-              <p className="mt-1 text-sm leading-6 text-muted">
-                Ask for a practice plan or explanation for any weak skill.
-              </p>
+        <AllSkillsChart strong={data?.strong ?? []} developing={data?.developing ?? []} weak={data?.weak ?? []} />
+
+        <motion.div variants={CARD_V}>
+          <Card className="mt-6 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-extrabold uppercase text-primary">Companion support</p>
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  Ask for a practice plan or explanation for any weak skill.
+                </p>
+              </div>
+              <Link
+                href="/student/companion"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
+              >
+                Open companion
+                <BookOpenCheck size={15} />
+              </Link>
             </div>
-            <Link
-              href="/student/companion"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-input bg-primary px-5 text-sm font-extrabold text-white"
-            >
-              Open companion
-              <BookOpenCheck size={15} />
-            </Link>
-          </div>
+          </Card>
         </motion.div>
       </motion.div>
     </Shell>

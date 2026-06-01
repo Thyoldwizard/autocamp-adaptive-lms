@@ -24,6 +24,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Visible focus ring for keyboard navigation */
+  :focus-visible {
+    outline: 2px solid #2D6A4F;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 /* ── Utility classes ─────────────────────────────────────────────────────── */
