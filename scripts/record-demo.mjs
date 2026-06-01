@@ -41,16 +41,17 @@ async function enableDemo(page, role) {
   // ── 1. Landing page ────────────────────────────────────────────────────────
   console.log('🎬  [1/9] Landing page...');
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  await wait(2500);
+  await wait(2000);
 
-  // Scroll down to show features / stats
-  await smoothScroll(page, 700);
-  await wait(1800);
-  await smoothScroll(page, 1400);
-  await wait(1500);
-  await smoothScroll(page, 2000);
-  await wait(1200);
-  // Scroll back to top to show demo buttons
+  // Scroll through entire page in steps to trigger whileInView animations
+  const pageHeight = await page.evaluate(() => document.body.scrollHeight);
+  const step = 500;
+  for (let y = 0; y <= pageHeight; y += step) {
+    await page.evaluate((top) => window.scrollTo({ top, behavior: 'smooth' }), y);
+    await wait(600);
+  }
+  // Pause at bottom then scroll back to hero
+  await wait(800);
   await smoothScroll(page, 0);
   await wait(1500);
 
@@ -113,43 +114,24 @@ async function enableDemo(page, role) {
   // ── 6. AI Companion ───────────────────────────────────────────────────────
   console.log('🎬  [6/9] AI Companion...');
   await page.goto(`${BASE}/student/companion`, { waitUntil: 'networkidle' });
-  await wait(2000); // let recentActivity messages render
+  // Wait for async load() to finish and recentActivity messages to render
+  await wait(2500);
 
-  // Show the starter prompts
-  await smoothScroll(page, 200);
+  // Show the header + starter prompts panel
+  await smoothScroll(page, 0);
+  await wait(1200);
+
+  // Scroll down to show the loaded demo conversation
+  await smoothScroll(page, 600);
+  await wait(2000);
+
+  // Scroll further to show both user and AI messages in full
+  await smoothScroll(page, 9999);
   await wait(1500);
 
-  // Click a starter prompt
-  const starters = await page.$$('button');
-  let sent = false;
-  for (const btn of starters) {
-    const txt = (await btn.textContent() ?? '').trim();
-    if (txt.length > 10 && txt.length < 120 &&
-        !txt.includes('Exit') && !txt.includes('pace') && !txt.includes('Demo')) {
-      try {
-        await btn.click();
-        sent = true;
-        await wait(2500); // wait for demo response
-        break;
-      } catch { /* ok */ }
-    }
-  }
-
-  if (!sent) {
-    // Fall back: type a message
-    const ta = await page.$('textarea');
-    if (ta) {
-      await ta.click();
-      await page.keyboard.type('What should I focus on this week to improve my SQL score?', { delay: 35 });
-      await wait(1000);
-      await page.keyboard.press('Enter');
-      await wait(2500);
-    }
-  }
-
-  // Scroll to show full AI response
-  await smoothScroll(page, 9999);
-  await wait(2000);
+  // Scroll back up to show the full layout
+  await smoothScroll(page, 0);
+  await wait(1000);
 
   // ── 7. Back to landing, switch to instructor ───────────────────────────────
   console.log('🎬  [7/9] Returning to landing → instructor demo...');
