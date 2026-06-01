@@ -21,9 +21,9 @@ const { getDashboard, getSkillBreakdown, recordActivity } = require('../../src/s
 // ─── Seed persona resolution ──────────────────────────────────────────────────
 
 const EMAILS = {
-  amna:  'amna.malik@atomcamp.test',
-  bilal: 'bilal.ahmed@atomcamp.test',
-  sadia: 'sadia.hussain@atomcamp.test',
+  amna:  'amna.malik@pace.test',
+  bilal: 'bilal.ahmed@pace.test',
+  sadia: 'sadia.hussain@pace.test',
 };
 
 const learnerIds = {};

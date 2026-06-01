@@ -10,7 +10,7 @@
  * backend admin (not editable by the user).
  */
 
-const TOKEN_KEY = "atomcamp_token";
+const TOKEN_KEY = "pace_token";
 
 /** Persist the access token returned by /auth/login or /auth/register. */
 export function saveToken(token) {

@@ -1,6 +1,6 @@
-# autocamp — Backend
+# pace — Backend
 
-Express 4 + Supabase backend for the atomcamp Adaptive LMS.
+Express 4 + Supabase backend for the pace.
 
 See the [root README](../README.md) for full project context, setup instructions, and API overview.
 

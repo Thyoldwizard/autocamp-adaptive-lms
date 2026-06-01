@@ -31,9 +31,9 @@ const modulesRepo    = require('../../src/db/repositories/modules.repo');
 // We resolve learner UUIDs dynamically so the tests survive a re-seed.
 
 const EMAILS = {
-  amna:  'amna.malik@atomcamp.test',
-  bilal: 'bilal.ahmed@atomcamp.test',
-  sadia: 'sadia.hussain@atomcamp.test',
+  amna:  'amna.malik@pace.test',
+  bilal: 'bilal.ahmed@pace.test',
+  sadia: 'sadia.hussain@pace.test',
 };
 
 // keyed by first name (amna / bilal / sadia)

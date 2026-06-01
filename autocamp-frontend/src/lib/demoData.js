@@ -235,7 +235,7 @@ export const demoLearnerDetail = {
   learner: {
     id: 'demo-amna',
     name: 'Amna Malik',
-    email: 'amna.malik@atomcamp.test',
+    email: 'amna.malik@pace.test',
     program: 'data-analytics-bootcamp',
     cohort: 'da-2026-spring',
     background: 'semi_technical',

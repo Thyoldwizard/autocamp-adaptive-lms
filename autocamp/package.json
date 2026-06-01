@@ -1,7 +1,7 @@
 {
-  "name": "autocamp-lms-backend",
+  "name": "pace-backend",
   "version": "0.1.0",
-  "description": "Smart Adaptive LMS backend for atomcamp",
+  "description": "Adaptive LMS backend for pace",
   "main": "src/server.js",
   "engines": {
     "node": ">=18.0.0"

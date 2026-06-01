@@ -1,10 +1,10 @@
-# autocamp Adaptive LMS — Page Map
+# pace — Page Map
 
 This document explains what the project does and what every frontend page is responsible for. Use it as a review checklist for what can be improved next.
 
 ## Product Overview
 
-autocamp Adaptive LMS is a learning platform for bootcamps and cohort-based education.
+pace Adaptive LMS is a learning platform for bootcamps and cohort-based education.
 
 The product has two connected experiences:
 
@@ -18,7 +18,7 @@ The core idea is one shared learner model. Student progress, skill confidence, m
 The frontend is currently moving toward premium editorial education-tech:
 
 - image-led public/auth pages
-- cream/green/orange atomcamp palette
+- cream/green/orange pace palette
 - large Plus Jakarta Sans headlines
 - Inter for UI/body text
 - glass panels for product signal
@@ -30,7 +30,7 @@ Detailed design rules live in `DESIGN_LANGUAGE.md`.
 
 ## Data And Demo Mode
 
-The app prefers real backend data when `atomcamp_token` exists in `localStorage`.
+The app prefers real backend data when `pace_token` exists in `localStorage`.
 
 Protected app screens also have local demo fallbacks in `src/lib/demoData.js`. This allows direct visual review of protected pages without logging in or depending on a perfectly clean auth state.
 
@@ -44,14 +44,14 @@ File: `src/app/page.js`
 
 Purpose:
 
-Public homepage and product story for autocamp Adaptive LMS.
+Public homepage and product story for pace Adaptive LMS.
 
 What it shows:
 
 - Full-screen image-led hero.
 - Moving product ticker.
 - Top nav with `Sign in` and `Create account`.
-- Large `atomcamp Adaptive LMS` headline.
+- Large `pace Adaptive LMS` headline.
 - CTA buttons to `/register` and `/login`.
 - Glass instructor dashboard preview.
 - Demo stats: cohorts, skills, modules, signal types.
@@ -96,7 +96,7 @@ What it shows:
 Behavior:
 
 - Calls `POST /api/auth/login`.
-- Stores returned `access_token` in `localStorage` as `atomcamp_token`.
+- Stores returned `access_token` in `localStorage` as `pace_token`.
 - Decodes role from JWT.
 - Redirects instructor to `/instructor/cohort`.
 - Redirects student to `/student/dashboard`.
@@ -472,4 +472,4 @@ Highest value visual improvements:
 - Add better loading skeletons.
 - Make instructor heatmap more visual.
 - Add page-level nav between student dashboard, skills, companion, and check-ins.
-- Replace remote Unsplash images with real atomcamp assets when available.
+- Replace remote Unsplash images with real pace assets when available.

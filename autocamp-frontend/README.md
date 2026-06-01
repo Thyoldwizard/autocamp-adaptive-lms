@@ -1,6 +1,6 @@
-# autocamp-frontend
+# pace-frontend
 
-Next.js 14 App Router frontend for the atomcamp Adaptive LMS.
+Next.js 14 App Router frontend for the pace Adaptive LMS.
 
 See the [root README](../README.md) for full project context, setup instructions, and feature overview.
 

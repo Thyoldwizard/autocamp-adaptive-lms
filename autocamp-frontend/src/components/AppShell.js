@@ -21,7 +21,7 @@ import { clearToken, getToken } from '@/lib/auth';
 import { getDemoRole, exitDemoMode } from '@/lib/demoMode';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-const SIDEBAR_KEY = 'autocamp_sidebar_collapsed';
+const SIDEBAR_KEY = 'pace_sidebar_collapsed';
 const EASE = [0.16, 1, 0.3, 1];
 
 // ---------------------------------------------------------------------------

@@ -249,7 +249,7 @@ function buildCheckinPrompt({ learner, skill, proficiency, backgroundType }) {
   }[backgroundType] ?? '';
 
   const system = [
-    'You are an assessment designer for the autocamp adaptive LMS.',
+    'You are an assessment designer for the pace adaptive LMS.',
     `Generate exactly 4 multiple-choice questions (MCQs) for the skill "${skill.name}" (${skill.code}).`,
     `Difficulty level: ${difficulty} (proficiency ${Math.round(proficiency * 100)}%).`,
     bgNote,
