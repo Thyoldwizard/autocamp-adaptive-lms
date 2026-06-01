@@ -106,7 +106,7 @@ It is **not** a course delivery platform. It is the **adaptive intelligence laye
 
 ```
 pace-lms/
-├── autocamp/               # Express backend  ← directory name is a legacy codename
+├── backend/               # Express backend
 │   ├── src/
 │   │   ├── routes/         # student/* and instructor/* API surfaces
 │   │   ├── services/       # business logic + rules engine
@@ -119,7 +119,7 @@ pace-lms/
 │   │   └── lib/            # logger, validate middleware
 │   └── migrations/         # SQL migrations 001–015
 │
-├── autocamp-frontend/      # Next.js 14 frontend  ← directory name is a legacy codename
+├── frontend/      # Next.js 14 frontend
 │   ├── src/
 │   │   ├── app/            # App Router pages (student/*, instructor/*, auth)
 │   │   ├── components/
@@ -149,13 +149,13 @@ pace-lms/
 
 ```bash
 git clone https://github.com/Thyoldwizard/autocamp-adaptive-lms.git
-cd autocamp-adaptive-lms   # repo name reflects original codename
+cd autocamp-adaptive-lms
 ```
 
 ### 2. Backend
 
 ```bash
-cd autocamp
+cd backend
 cp .env.example .env
 # Fill in: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET
 npm install
@@ -169,7 +169,7 @@ To enable real AI responses set `LLM_PROVIDER=gemini` and `GEMINI_API_KEY=your-k
 ### 3. Frontend
 
 ```bash
-cd autocamp-frontend
+cd frontend
 cp .env.example .env.local
 npm install
 npm run dev            # http://localhost:3001
@@ -294,8 +294,8 @@ All sincere contributions are welcome — code, docs, design feedback, and issue
 
 - [`docs/architecture.md`](docs/architecture.md) — system design, flows, and data model
 - [`docs/roadmap.md`](docs/roadmap.md) — planned work
-- [`autocamp-frontend/DESIGN_LANGUAGE.md`](autocamp-frontend/DESIGN_LANGUAGE.md) — frontend visual system
-- [`autocamp-frontend/PAGE_MAP.md`](autocamp-frontend/PAGE_MAP.md) — page-by-page product reference
+- [`frontend/DESIGN_LANGUAGE.md`](frontend/DESIGN_LANGUAGE.md) — frontend visual system
+- [`frontend/PAGE_MAP.md`](frontend/PAGE_MAP.md) — page-by-page product reference
 - [SECURITY.md](SECURITY.md) — vulnerability reporting policy
 
 ---
