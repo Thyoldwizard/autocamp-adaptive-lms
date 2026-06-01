@@ -70,16 +70,16 @@ function useLogout() {
 
 function BrandWordmark() {
   return (
-    <Link href="/" aria-label="atomcamp home" className="font-display text-2xl font-extrabold leading-none text-primary">
-      atom<span className="text-accent">camp</span>
+    <Link href="/" aria-label="pace home" className="font-display text-2xl font-extrabold leading-none text-primary">
+      pa<span className="text-accent">ce</span>
     </Link>
   );
 }
 
 function BrandMark() {
   return (
-    <Link href="/" aria-label="atomcamp home" className="font-display text-2xl font-extrabold leading-none text-primary">
-      a<span className="text-accent">.</span>
+    <Link href="/" aria-label="pace home" className="font-display text-2xl font-extrabold leading-none text-primary">
+      p<span className="text-accent">.</span>
     </Link>
   );
 }

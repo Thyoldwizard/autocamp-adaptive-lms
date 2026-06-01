@@ -109,7 +109,7 @@ function BrandWordmark({ light = false }) {
         light ? 'text-white' : 'text-primary'
       }`}
     >
-      atom<span className="text-accent">camp</span>
+      pa<span className="text-accent">ce</span>
     </span>
   );
 }
@@ -147,7 +147,7 @@ function Nav() {
     <header className="absolute left-0 right-0 top-0 z-30">
       <Ticker />
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-        <Link href="/" aria-label="atomcamp home">
+        <Link href="/" aria-label="pace home">
           <BrandWordmark light />
         </Link>
         <div className="flex items-center gap-2 rounded-badge border border-white/20 bg-white/10 p-1 backdrop-blur-2xl">
@@ -369,7 +369,7 @@ function Hero() {
               Adaptive LMS for cohort-based education
             </div>
             <h1 className="font-display text-6xl font-extrabold leading-[0.9] text-white sm:text-7xl lg:text-[104px]">
-              atomcamp Adaptive LMS
+              pace
             </h1>
             <p className="mt-7 max-w-[680px] text-lg leading-8 text-white/80 sm:text-xl sm:leading-9">
               A richer learner model for modern bootcamps, connecting student progress,
@@ -429,7 +429,7 @@ function EditorialIntro() {
         </div>
         <div className="lg:pl-8">
           <p className="max-w-[660px] text-base leading-8 text-muted sm:text-lg">
-            autocamp turns onboarding, module movement, skill state, companion activity,
+            pace turns onboarding, module movement, skill state, companion activity,
             and risk rules into one readable system, so support feels timely instead of reactive.
           </p>
           <div className="mt-8 grid grid-cols-2 gap-3">

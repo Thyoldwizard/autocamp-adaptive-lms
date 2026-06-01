@@ -143,7 +143,7 @@ export default function OnboardingPage() {
               Tune the first signal.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-8 text-white/80">
-              A little context helps autocamp recommend better modules and support moments from the start.
+              A little context helps pace recommend better modules and support moments from the start.
             </p>
           </div>
 

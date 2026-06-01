@@ -74,7 +74,7 @@ function BrandWordmark({ light = false }) {
         light ? 'text-white' : 'text-primary'
       }`}
     >
-      atom<span className="text-accent">camp</span>
+      pa<span className="text-accent">ce</span>
     </span>
   );
 }
@@ -122,7 +122,7 @@ function VisualPanel() {
 
       <div className="relative z-10 flex min-h-screen flex-col justify-between px-12 py-14 xl:px-16">
         <div className="flex items-center justify-between">
-          <Link href="/" aria-label="atomcamp home">
+          <Link href="/" aria-label="pace home">
             <BrandWordmark light />
           </Link>
           <div className="rounded-badge border border-white/30 bg-white/12 px-4 py-2 text-xs font-bold uppercase text-white backdrop-blur-2xl">
@@ -144,7 +144,7 @@ function VisualPanel() {
             Build your learning signal.
           </h1>
           <p className="mt-7 max-w-[560px] text-lg leading-8 text-white/80">
-            Create a profile that helps autocamp recommend modules, track skills, and support the right intervention moments.
+            Create a profile that helps pace recommend modules, track skills, and support the right intervention moments.
           </p>
         </motion.div>
 
@@ -249,7 +249,7 @@ export default function RegisterPage() {
           className="relative w-full max-w-[560px]"
         >
           <motion.div variants={fieldGroup} className="mb-8 flex items-center justify-between">
-            <Link href="/" aria-label="atomcamp home">
+            <Link href="/" aria-label="pace home">
               <BrandWordmark />
             </Link>
             <Link
@@ -272,7 +272,7 @@ export default function RegisterPage() {
                 Start adaptive.
               </h1>
               <p className="mt-5 max-w-[420px] text-sm leading-7 text-muted">
-                Tell autocamp who you are, what you&apos;re learning, and where you want to go.
+                Tell pace who you are, what you&apos;re learning, and where you want to go.
               </p>
             </div>
 
