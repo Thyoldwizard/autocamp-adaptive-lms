@@ -12,7 +12,7 @@ const BASE = 'http://localhost:3001';
   const page = await ctx.newPage();
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
-  await page.evaluate(() => localStorage.setItem('autocamp_demo', 'student'));
+  await page.evaluate(() => localStorage.setItem('pace_demo', 'student'));
 
   await page.goto(`${BASE}/student/companion`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1000);

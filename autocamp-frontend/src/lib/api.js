@@ -2,12 +2,12 @@
  * Thin fetch wrapper for the pace backend.
  *
  * - Base URL comes from NEXT_PUBLIC_API_URL (default: http://localhost:3000/api)
- * - Reads the JWT from localStorage key `atomcamp_token` and sends it as
+ * - Reads the JWT from localStorage key `pace_token` and sends it as
  *   Authorization: Bearer on every request.
  * - On 401 the token is cleared and the browser is redirected to /login.
  * - Throws a plain Error (with the server's message text) on any other non-OK
  *   response so callers can catch it and display feedback.
- * - When demo mode is active (autocamp_demo in localStorage), GET calls are
+ * - When demo mode is active (pace_demo in localStorage), GET calls are
  *   short-circuited to demoData and POSTs return canned no-op responses.
  */
 
@@ -27,7 +27,7 @@ import {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-const TOKEN_KEY = "atomcamp_token";
+const TOKEN_KEY = "pace_token";
 
 function getStoredToken() {
   if (typeof window === "undefined") return null;

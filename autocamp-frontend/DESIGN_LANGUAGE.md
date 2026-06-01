@@ -1,6 +1,6 @@
-# autocamp Frontend Design Language
+# pace Frontend Design Language
 
-This document is the source of truth for the current autocamp frontend direction.
+This document is the source of truth for the current pace frontend direction.
 
 ## Design Position
 
@@ -20,7 +20,7 @@ Core feeling:
 
 ## Palette
 
-Use atomcamp colors as the system base:
+Use pace colors as the system base:
 
 - background: `#F9F7F4`
 - primary green: `#2D6A4F`
@@ -64,7 +64,7 @@ Use Inter for:
 
 Hero headlines should be large, heavy, and editorial. Current examples:
 
-- `atomcamp Adaptive LMS`
+- `pace`
 - `Learn with signal.`
 - `Build your learning signal.`
 - `Start adaptive.`

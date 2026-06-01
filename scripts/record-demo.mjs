@@ -22,7 +22,7 @@ async function wait(ms) {
 }
 
 async function enableDemo(page, role) {
-  await page.evaluate((r) => localStorage.setItem('autocamp_demo', r), role);
+  await page.evaluate((r) => localStorage.setItem('pace_demo', r), role);
 }
 
 (async () => {

@@ -23,11 +23,11 @@ If you are planning something larger than a bug fix or a small UI change, open a
 
 ```bash
 # 1. Fork and clone
-git clone https://github.com/your-username/autocamp-adaptive-lms.git
-cd autocamp-adaptive-lms
+git clone https://github.com/your-username/pace-lms.git
+cd pace-lms
 
 # 2. Backend
-cd autocamp
+cd backend
 cp .env.example .env
 # Edit .env: fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET
 npm install
@@ -36,7 +36,7 @@ npm run seed
 npm run dev      # http://localhost:3000
 
 # 3. Frontend (new terminal)
-cd autocamp-frontend
+cd frontend
 cp .env.example .env.local
 # .env.local: NEXT_PUBLIC_API_URL=/api  (uses the built-in Next.js rewrite)
 npm install
@@ -50,7 +50,7 @@ Use demo mode. Click "Explore as student" or "Explore as instructor" on the land
 ### Running tests
 
 ```bash
-cd autocamp
+cd backend
 npm run test:all   # 420 tests — must stay green
 ```
 

@@ -7,7 +7,7 @@
 If you discover a security issue — authentication bypass, injections, data leakage, or any other vulnerability — please report it privately:
 
 **Email:** smhassan223@gmail.com  
-**Subject line:** `[SECURITY] atomcamp-adaptive-lms — brief description`
+**Subject line:** `[SECURITY] pace — brief description`
 
 Include:
 - A description of the vulnerability and its potential impact
@@ -22,8 +22,8 @@ We will acknowledge receipt within 72 hours and aim to release a fix within 14 d
 
 This policy covers:
 
-- The Express backend (`autocamp/`)
-- The Next.js frontend (`autocamp-frontend/`)
+- The Express backend (`backend/`)
+- The Next.js frontend (`frontend/`)
 - The Supabase schema and migration scripts
 - The authentication and authorization middleware
 

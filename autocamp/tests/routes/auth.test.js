@@ -121,7 +121,7 @@ function makeToken(payload = {}) {
 }
 
 const STUDENT_BODY = {
-  email:           'new.student@atomcamp.test',
+  email:           'new.student@pace.test',
   password:        'SecurePass123!',
   role:            'student',
   name:            'Test Student',
@@ -132,7 +132,7 @@ const STUDENT_BODY = {
 };
 
 const INSTRUCTOR_BODY = {
-  email:    'instructor@atomcamp.test',
+  email:    'instructor@pace.test',
   password: 'SecurePass123!',
   role:     'instructor',
   name:     'Test Instructor',
@@ -259,7 +259,7 @@ describe('POST /api/auth/login', () => {
 
   test('successful login — 200 with access_token and user', async () => {
     const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.fake.token';
-    const fakeUser  = { id: 'user-uuid-123', email: 'amna.malik@atomcamp.test' };
+    const fakeUser  = { id: 'user-uuid-123', email: 'amna.malik@pace.test' };
 
     mockSignInResult = {
       data:  { session: { access_token: fakeToken }, user: fakeUser },
@@ -267,8 +267,8 @@ describe('POST /api/auth/login', () => {
     };
 
     const { status, body } = await request('POST', '/api/auth/login', {
-      email:    'amna.malik@atomcamp.test',
-      password: 'AtomCamp2026!',
+      email:    'amna.malik@pace.test',
+      password: 'Pace2026!',
     });
 
     assert.equal(status, 200, `Expected 200, got ${status}: ${JSON.stringify(body)}`);
@@ -285,7 +285,7 @@ describe('POST /api/auth/login', () => {
     };
 
     const { status, body } = await request('POST', '/api/auth/login', {
-      email:    'amna.malik@atomcamp.test',
+      email:    'amna.malik@pace.test',
       password: 'WrongPassword!',
     });
 

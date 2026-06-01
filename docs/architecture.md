@@ -2,10 +2,10 @@
 
 ## Overview
 
-atomcamp Adaptive LMS is a monorepo with two applications:
+pace is a monorepo with two applications:
 
-- **`autocamp/`** — Node.js + Express backend, exposes a REST API consumed by the frontend and any future clients
-- **`autocamp-frontend/`** — Next.js 14 frontend, App Router, server-side rendering is minimal (most pages are `'use client'`)
+- **`backend/`** — Node.js + Express backend, exposes a REST API consumed by the frontend and any future clients
+- **`frontend/`** — Next.js 14 frontend, App Router, server-side rendering is minimal (most pages are `'use client'`)
 
 ```
 Browser
@@ -112,7 +112,7 @@ The cohort page uses manual `Promise.all` to fan out three requests simultaneous
 ### Demo mode
 
 ```
-localStorage key: autocamp_demo = "student" | "instructor" | null
+localStorage key: pace_demo = "student" | "instructor" | null
 
 src/lib/demoMode.js   — getDemoRole / setDemoMode / exitDemoMode
 src/lib/demoData.js   — static fixtures for every API route
@@ -146,7 +146,7 @@ Design tokens live in `src/lib/constants.js` (EASE_OUT, CARD_V, CONTAINER_V, RIS
 Register
   POST /auth/register → Supabase Admin createUser (sets app_metadata.role)
                        → returns access_token
-  Frontend saves token to localStorage key atomcamp_token
+  Frontend saves token to localStorage key pace_token
 
 Login
   POST /auth/login → Supabase Auth signInWithPassword
@@ -193,7 +193,7 @@ The cohort page fans out three API calls in parallel (overview, at-risk, heatmap
 
 ## Deployment assumptions
 
-- **Backend:** Railway or Render (Node.js service). Set all env vars from `autocamp/.env.example`. Run `npm run migrate` as a release command.
+- **Backend:** Railway or Render (Node.js service). Set all env vars from `backend/.env.example`. Run `npm run migrate` as a release command.
 - **Frontend:** Vercel. Set `NEXT_PUBLIC_API_URL=https://your-backend.railway.app/api`. The `next.config.mjs` rewrite only applies in local dev.
 - **Database:** Supabase free tier. Migrations 001–015 must be applied before any API call succeeds. The seed script is optional but creates the demo accounts.
 - **Supabase pause:** Free-tier projects pause after 1 week of inactivity. Demo mode keeps the frontend usable regardless.

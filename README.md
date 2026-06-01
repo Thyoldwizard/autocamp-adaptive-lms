@@ -105,8 +105,8 @@ It is **not** a course delivery platform. It is the **adaptive intelligence laye
 ## Project Structure
 
 ```
-atomcamp-adaptive-lms/
-├── autocamp/               # Express backend
+pace-lms/
+├── autocamp/               # Express backend  ← directory name is a legacy codename
 │   ├── src/
 │   │   ├── routes/         # student/* and instructor/* API surfaces
 │   │   ├── services/       # business logic + rules engine
@@ -119,7 +119,7 @@ atomcamp-adaptive-lms/
 │   │   └── lib/            # logger, validate middleware
 │   └── migrations/         # SQL migrations 001–015
 │
-├── autocamp-frontend/      # Next.js 14 frontend
+├── autocamp-frontend/      # Next.js 14 frontend  ← directory name is a legacy codename
 │   ├── src/
 │   │   ├── app/            # App Router pages (student/*, instructor/*, auth)
 │   │   ├── components/
@@ -149,7 +149,7 @@ atomcamp-adaptive-lms/
 
 ```bash
 git clone https://github.com/Thyoldwizard/autocamp-adaptive-lms.git
-cd autocamp-adaptive-lms
+cd autocamp-adaptive-lms   # repo name reflects original codename
 ```
 
 ### 2. Backend
@@ -214,10 +214,10 @@ After running `npm run seed`:
 
 | Role | Email | Password |
 |---|---|---|
-| Instructor | instructor@atomcamp.test | AtomCamp2026! |
-| Student | amna.malik@atomcamp.test | AtomCamp2026! |
-| Student | bilal.ahmed@atomcamp.test | AtomCamp2026! |
-| Student | sadia.hussain@atomcamp.test | AtomCamp2026! |
+| Instructor | instructor@pace.test | Pace2026! |
+| Student | amna.malik@pace.test | Pace2026! |
+| Student | bilal.ahmed@pace.test | Pace2026! |
+| Student | sadia.hussain@pace.test | Pace2026! |
 
 ---
 

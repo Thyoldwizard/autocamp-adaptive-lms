@@ -1,7 +1,7 @@
 require('../../config/env');
 const supabase = require('../../config/supabase');
 
-const SEED_PASSWORD = process.env.SEED_PASSWORD || 'AtomCamp2026!';
+const SEED_PASSWORD = process.env.SEED_PASSWORD || 'Pace2026!';
 
 // ─── SKILLS ───────────────────────────────────────────────────────────────────
 
@@ -220,7 +220,7 @@ const PERSONAS = [
   // Excel (used it daily at work), struggling hard with SQL and Python.
   // Already missed one SQL assignment deadline.
   {
-    email: 'amna.malik@atomcamp.test',
+    email: 'amna.malik@pace.test',
     password: SEED_PASSWORD,
     learner: {
       name: 'Amna Malik',
@@ -299,7 +299,7 @@ const PERSONAS = [
   // Breezes through Python and classical ML. Hitting a wall on deep learning —
   // loss plateaus, confused by training dynamics. No struggle signals yet.
   {
-    email: 'bilal.ahmed@atomcamp.test',
+    email: 'bilal.ahmed@pace.test',
     password: SEED_PASSWORD,
     learner: {
       name: 'Bilal Ahmed',
@@ -376,7 +376,7 @@ const PERSONAS = [
   // consistent effort, but quiz scores on the last two modules are below
   // threshold — conceptual gap on AI tools and prompt construction.
   {
-    email: 'sadia.hussain@atomcamp.test',
+    email: 'sadia.hussain@pace.test',
     password: SEED_PASSWORD,
     learner: {
       name: 'Sadia Hussain',
@@ -481,7 +481,7 @@ const PERSONAS = [
 ];
 
 const DEMO_INSTRUCTOR = {
-  email: 'instructor@atomcamp.test',
+  email: 'instructor@pace.test',
   password: SEED_PASSWORD,
   name: 'Demo Instructor',
   cohorts: ['da-2026-spring', 'ai-2026-spring', 'auto-2026-spring'],
