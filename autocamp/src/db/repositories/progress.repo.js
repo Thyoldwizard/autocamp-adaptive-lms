@@ -3,18 +3,20 @@
 const supabase = require('../../config/supabase');
 
 /**
- * Return all progress rows for a learner, joined with the module catalog.
+ * Return progress rows for a learner, joined with the module catalog.
  * @param {string} learnerId
+ * @param {{ limit?: number, offset?: number }} [page]
  * @returns {Promise<object[]>}
  */
-async function findByLearnerId(learnerId) {
+async function findByLearnerId(learnerId, { limit = 200, offset = 0 } = {}) {
   if (!learnerId) throw new Error('progress.findByLearnerId: learnerId is required');
 
   const { data, error } = await supabase
     .from('progress')
     .select('*, module:modules(id, code, name, program, sequence)')
     .eq('learner_id', learnerId)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) throw error;
   return data ?? [];
@@ -85,4 +87,23 @@ async function updateStatus(learnerId, moduleId, status, extra = {}) {
   return data;
 }
 
-module.exports = { findByLearnerId, findByLearnerAndModule, upsert, updateStatus };
+/**
+ * Return all progress rows for a list of learner IDs in one query.
+ * @param {string[]} learnerIds
+ * @param {{ limit?: number }} [opts]
+ * @returns {Promise<object[]>}
+ */
+async function findByLearnerIds(learnerIds, { limit = 2000 } = {}) {
+  if (!learnerIds?.length) return [];
+
+  const { data, error } = await supabase
+    .from('progress')
+    .select('*, module:modules(id, code, name, program, sequence)')
+    .in('learner_id', learnerIds)
+    .range(0, limit - 1);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+module.exports = { findByLearnerId, findByLearnerIds, findByLearnerAndModule, upsert, updateStatus };

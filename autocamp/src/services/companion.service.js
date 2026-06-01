@@ -11,19 +11,22 @@
  *   3. Fetch last 10 companion messages as conversation history.
  *   4. Call the LLM (gemini or fallback, per env).
  *   5. Persist both the user message and assistant reply.
- *   6. If the reply contains struggle indicators → write help_requested signal.
+ *   6. If the user's message contains struggle indicators → write help_requested signal.
  *   7. Return { response, signalCreated }.
  */
 
-const { getLearnerModel } = require('./learnerModel.service');
-const companionRepo       = require('../db/repositories/companion.repo');
-const signalsRepo         = require('../db/repositories/signals.repo');
-const llm                 = require('./llm');
+const { getLearnerModel }  = require('./learnerModel.service');
+const companionRepo        = require('../db/repositories/companion.repo');
+const signalsRepo          = require('../db/repositories/signals.repo');
+const llm                  = require('./llm');
+const fallbackProvider     = require('./llm/fallback.provider');
+const { getRules }         = require('../config/rules');
+const logger               = require('../lib/logger');
 
 // ─── Struggle phrase detection ────────────────────────────────────────────────
 //
-// When the LLM response itself signals confusion in the student's message,
-// we write a help_requested signal so instructors are alerted.
+// Runs on the student's own message (not the LLM reply): when the user signals
+// confusion, we write a help_requested signal so instructors are alerted.
 
 const STRUGGLE_PHRASES = [
   "i don't understand",
@@ -43,9 +46,15 @@ const STRUGGLE_PHRASES = [
   'have no idea',
 ];
 
+// Compile each phrase to a word-boundary regex so it only matches as whole
+// words. A raw substring match produced false positives — e.g. "help me"
+// firing inside "help mentor" — which a leading/trailing \b prevents.
+const STRUGGLE_PATTERNS = STRUGGLE_PHRASES.map(
+  (phrase) => new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
+);
+
 function detectStruggle(userMessage) {
-  const lower = userMessage.toLowerCase();
-  return STRUGGLE_PHRASES.some((phrase) => lower.includes(phrase));
+  return STRUGGLE_PATTERNS.some((pattern) => pattern.test(userMessage));
 }
 
 // ─── System prompt builder ────────────────────────────────────────────────────
@@ -110,6 +119,25 @@ function buildHistory(rows) {
     .map((r) => ({ role: r.role, content: r.content }));
 }
 
+// ─── LLM call with retry + deterministic fallback ────────────────────────────
+//
+// Attempt the primary provider up to twice; on both failures degrade to the
+// deterministic fallback so the companion never returns a 500 to the user.
+
+async function generateWithFallback(opts) {
+  try {
+    return await llm.generate(opts);
+  } catch (firstErr) {
+    logger.warn('LLM first attempt failed, retrying', { error: firstErr.message });
+    try {
+      return await llm.generate(opts);
+    } catch (secondErr) {
+      logger.warn('LLM retry failed, using deterministic fallback', { error: secondErr.message });
+      return await fallbackProvider.generate(opts);
+    }
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -126,9 +154,10 @@ async function chat(learnerId, userMessage) {
   const cleanMessage = userMessage.trim();
 
   // ── 1 + 3: Fetch model and history in parallel ────────────────────────────
+  const maxHistory = getRules().companion?.maxHistoryMessages ?? 10;
   const [model, historyRows] = await Promise.all([
     getLearnerModel(learnerId),
-    companionRepo.findRecentByLearnerId(learnerId, 10),
+    companionRepo.findRecentByLearnerId(learnerId, maxHistory),
   ]);
 
   // ── 2: Build system prompt ────────────────────────────────────────────────
@@ -140,8 +169,8 @@ async function chat(learnerId, userMessage) {
     { role: 'user', content: cleanMessage },
   ];
 
-  // ── 4: Call LLM ───────────────────────────────────────────────────────────
-  const response = await llm.generate({ system, messages });
+  // ── 4: Call LLM (one retry; falls back to deterministic on double failure) ──
+  const response = await generateWithFallback({ system, messages });
 
   // ── 5: Persist both turns in parallel ─────────────────────────────────────
   const [, assistantRow] = await Promise.all([

@@ -341,6 +341,28 @@ describe('recordActivity — progress write + struggle detection', () => {
     assert.equal(result.signalsCreated.length, 0, 'No signals for a clean pass');
   });
 
+  test('started_at is preserved across subsequent activity events (not overwritten)', async () => {
+    // The powerBi row already exists from the tests above. Capture its current
+    // started_at, record another event, and confirm the original start time is
+    // not rewritten (regression for the unconditional started_at upsert bug).
+    const { data: before } = await supabase
+      .from('progress')
+      .select('started_at')
+      .eq('learner_id', learnerIds.amna)
+      .eq('module_id', powerBiModuleId)
+      .single();
+    assert.ok(before?.started_at, 'precondition: existing row must already have a started_at');
+
+    const result = await recordActivity(learnerIds.amna, powerBiModuleId, {
+      score:         95,
+      attempts:      2,
+      completionPct: 100,
+    });
+
+    assert.equal(result.progress.started_at, before.started_at,
+      'started_at must not change on a follow-up activity event');
+  });
+
   // ── Amna low-score struggle signal ──────────────────────────────────────
 
   test('Amna — low score (48) triggers a low_score signal', async () => {

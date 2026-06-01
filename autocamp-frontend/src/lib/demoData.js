@@ -135,6 +135,10 @@ export const demoStudentDashboard = {
     strongAreas: ['Excel'],
     weakAreas: ['SQL', 'Python'],
   },
+  progressHistory: [
+    { week: 'W1', pct: 20 }, { week: 'W2', pct: 28 }, { week: 'W3', pct: 35 },
+    { week: 'W4', pct: 42 }, { week: 'W5', pct: 51 }, { week: 'W6', pct: 58 },
+  ],
   recentActivity: [
     {
       role: 'user',
@@ -178,4 +182,134 @@ export const demoCheckin = {
     },
   ],
   answers: [1, 0, 1, 0],
+};
+
+export const demoCheckinResult = {
+  score: 75,
+  correctAnswers: 3,
+  totalQuestions: 4,
+  updatedProficiency: 0.42,
+  review: [
+    {
+      question: 'Which join keeps all rows from the left table?',
+      isCorrect: true,
+      options: ['INNER JOIN', 'LEFT JOIN', 'CROSS JOIN', 'FULL JOIN'],
+      correctIndex: 1,
+      explanation:
+        'LEFT JOIN preserves every row from the left table and fills NULLs where the right table has no match.',
+    },
+    {
+      question: 'What does GROUP BY usually pair with?',
+      isCorrect: true,
+      options: ['Aggregate functions', 'CSS selectors', 'Image uploads', 'JWT headers'],
+      correctIndex: 0,
+      explanation:
+        'GROUP BY collapses rows into groups; aggregate functions like COUNT, SUM, or AVG then summarise each group.',
+    },
+    {
+      question: 'Which clause filters grouped results?',
+      isCorrect: true,
+      options: ['WHERE', 'HAVING', 'ORDER BY', 'LIMIT'],
+      correctIndex: 1,
+      explanation:
+        'HAVING filters after grouping. Use WHERE to filter individual rows before grouping, HAVING to filter groups after.',
+    },
+    {
+      question: 'What should you check first when a join duplicates rows?',
+      isCorrect: false,
+      options: ['Table relationship keys', 'Font size', 'Browser cache', 'Button color'],
+      correctIndex: 0,
+      explanation:
+        'Duplicated rows usually signal a many-to-many join without a unique key. Check your relationship keys and add DISTINCT or GROUP BY.',
+    },
+  ],
+};
+
+export const demoCompanionResponse = {
+  response:
+    'Great question! SQL joins can be confusing at first. Think of LEFT JOIN as keeping every row from your "main" table and filling in NULLs for any unmatched rows on the right side. So if you want all customers — even those who have never placed an order — LEFT JOIN is your friend. Want me to walk through a short practice example based on your current module?',
+  signalCreated: false,
+};
+
+export const demoLearnerDetail = {
+  learner: {
+    id: 'demo-amna',
+    name: 'Amna Malik',
+    email: 'amna.malik@atomcamp.test',
+    program: 'data-analytics-bootcamp',
+    cohort: 'da-2026-spring',
+    background: 'semi_technical',
+    stated_goal: 'Get a data analyst job within 6 months.',
+    enrolledAt: '2026-05-02T00:00:00.000Z',
+    onboardingCompleted: true,
+  },
+  analysis: {
+    atRisk: { level: 'medium', score: 42, reasons: ['SQL practice is moving slower than expected.'] },
+    goalProgress: { percentage: 58, onTrack: false },
+    nextBestAction: {
+      moduleName: 'SQL Joins Practice Set',
+      reason: 'Rebuild confidence on joins before moving deeper into analytics projects.',
+    },
+  },
+  skillState: [
+    { skill_id: 'excel', skillCode: 'excel', skillName: 'Excel', proficiency: 0.72 },
+    { skill_id: 'statistics', skillCode: 'statistics', skillName: 'Statistics', proficiency: 0.46 },
+    { skill_id: 'sql', skillCode: 'sql', skillName: 'SQL', proficiency: 0.28 },
+    { skill_id: 'python', skillCode: 'python', skillName: 'Python', proficiency: 0.18 },
+    { skill_id: 'power_bi', skillCode: 'power_bi', skillName: 'Power BI', proficiency: 0.05 },
+  ],
+  progress: [
+    {
+      moduleCode: 'excel_basics',
+      moduleName: 'Excel Basics',
+      status: 'completed',
+      completionPct: 100,
+      startedAt: '2026-05-03T10:00:00.000Z',
+      completedAt: '2026-05-10T14:00:00.000Z',
+    },
+    {
+      moduleCode: 'sql_basics',
+      moduleName: 'SQL for Data Analysis',
+      status: 'in_progress',
+      completionPct: 35,
+      startedAt: '2026-05-12T09:00:00.000Z',
+      completedAt: null,
+    },
+    {
+      moduleCode: 'statistics_101',
+      moduleName: 'Statistics 101',
+      status: 'not_started',
+      completionPct: 0,
+      startedAt: null,
+      completedAt: null,
+    },
+  ],
+  recentSignals: [
+    {
+      id: 'sig-1',
+      type: 'low_score',
+      description: 'SQL check-in score: 45%',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    },
+    {
+      id: 'sig-2',
+      type: 'inactivity',
+      description: 'No module activity in 4 days',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
+    },
+  ],
+  recentMessages: [
+    {
+      role: 'user',
+      content: 'I understand INNER JOIN but LEFT JOIN still confuses me.',
+      createdAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+    },
+    {
+      role: 'assistant',
+      content:
+        'Think of LEFT JOIN as keeping every row from the first table, then matching what it can from the second.',
+      createdAt: new Date(Date.now() - 1000 * 60 * 38).toISOString(),
+    },
+  ],
+  flags: [],
 };

@@ -15,10 +15,11 @@ const requireRole    = require('../../middleware/requireRole');
 const ownLearnerOnly = require('../../middleware/ownLearnerOnly');
 const { getOnboardingStatus, completeOnboarding } =
   require('../../services/onboarding.service');
+const { validate }    = require('../../lib/validate');
+const { completeBody } = require('../../schemas/onboarding.schemas');
 
 const router = express.Router();
 
-// ── Guard: all routes below require a valid student JWT + learner record ──────
 router.use(auth, requireRole('student'), ownLearnerOnly);
 
 // GET /onboarding/status
@@ -32,15 +33,19 @@ router.get('/onboarding/status', async (req, res, next) => {
 });
 
 // POST /onboarding/complete
-router.post('/onboarding/complete', async (req, res, next) => {
-  try {
-    // answers is an optional map of { skillCode: proficiency }
-    const answers = req.body?.answers ?? {};
-    const model   = await completeOnboarding(req.learnerId, answers);
-    res.status(201).json(model);
-  } catch (err) {
-    next(err);
-  }
-});
+// Body: { answers?: { [skillCode: string]: number (0–1) } }
+router.post(
+  '/onboarding/complete',
+  validate({ body: completeBody }),
+  async (req, res, next) => {
+    try {
+      // answers defaults to {} via schema if omitted
+      const model = await completeOnboarding(req.learnerId, req.body.answers);
+      res.status(201).json(model);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 module.exports = router;

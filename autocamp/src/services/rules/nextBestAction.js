@@ -1,16 +1,15 @@
 'use strict';
 
-// Skills with proficiency > 0 but below this are "active gaps" the learner
-// is working on. Skills at exactly 0 are future territory — not yet started
-// and should not pull focus away from active work.
-const PROFICIENCY_THRESHOLD = 0.7;
+const { getRules } = require('../../config/rules');
 
-// Extra weight given to modules already in progress, so the function
-// prefers "finish what you started" when gaps are similar in magnitude.
-// Must be > the largest possible gap difference to avoid in-progress modules
-// losing to a barely-larger fresh gap, but small enough that a significantly
-// worse active gap on a fresh module still wins.
-const IN_PROGRESS_BOOST = 0.30;
+// Tunables come from config/rules.js → nextBestAction:
+//   proficiencyThreshold — skills with 0 < proficiency < this are "active gaps"
+//     the learner is working on. Skills at exactly 0 are future territory and
+//     should not pull focus away from active work.
+//   inProgressBoost — a fixed tie-breaker nudge added to an in-progress
+//     module's gap score so it wins over a fresh module of similar difficulty
+//     ("finish what you started"). It is a nudge, not an override: a fresh
+//     module whose gap is more than `inProgressBoost` larger still wins.
 
 /**
  * Returns the single most important next module for a learner.
@@ -24,6 +23,9 @@ const IN_PROGRESS_BOOST = 0.30;
  */
 function nextBestAction({ skillState, modules, progress }) {
   if (!skillState.length || !modules.length) return null;
+
+  const { proficiencyThreshold: PROFICIENCY_THRESHOLD, inProgressBoost: IN_PROGRESS_BOOST } =
+    getRules().nextBestAction;
 
   const proficiencyMap = Object.fromEntries(
     skillState.map((s) => [s.skill_id, s.proficiency])

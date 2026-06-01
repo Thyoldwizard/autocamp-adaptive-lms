@@ -8,6 +8,10 @@
  *
  * Both providers export: generate({ system, messages }) → Promise<string>
  *
+ * If LLM_PROVIDER=gemini but GEMINI_API_KEY is absent, a warning is logged
+ * and the deterministic fallback provider is used — the server never crashes
+ * on a missing key.
+ *
  * The LLMError class is re-exported from gemini.provider so the rest of the
  * codebase can import it from one place regardless of active provider.
  */
@@ -18,9 +22,15 @@ const { LLMError }     = require('./gemini.provider');
 let provider;
 
 if (LLM_PROVIDER === 'gemini') {
-  provider = require('./gemini.provider');
+  if (!process.env.GEMINI_API_KEY) {
+    require('../../lib/logger').warn(
+      'LLM_PROVIDER=gemini but GEMINI_API_KEY is not set — falling back to deterministic provider',
+    );
+    provider = require('./fallback.provider');
+  } else {
+    provider = require('./gemini.provider');
+  }
 } else {
-  // Default / fallback — safe for tests and local dev without an API key
   provider = require('./fallback.provider');
 }
 

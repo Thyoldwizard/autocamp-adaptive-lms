@@ -10,17 +10,17 @@
  * POST /activity/:moduleId     → recordActivity(learnerId, moduleId, body)
  */
 
-const express  = require('express');
-const auth     = require('../../middleware/auth');
-const requireRole  = require('../../middleware/requireRole');
+const express        = require('express');
+const auth           = require('../../middleware/auth');
+const requireRole    = require('../../middleware/requireRole');
 const ownLearnerOnly = require('../../middleware/ownLearnerOnly');
 const { getDashboard, getSkillBreakdown, recordActivity } =
   require('../../services/dashboard.service');
-const { BadRequestError } = require('../../lib/errors');
+const { validate }       = require('../../lib/validate');
+const { activityParams, activityBody } = require('../../schemas/dashboard.schemas');
 
 const router = express.Router();
 
-// ── Guard: all routes below require a valid student JWT + learner record ──────
 router.use(auth, requireRole('student'), ownLearnerOnly);
 
 // GET /dashboard
@@ -44,27 +44,17 @@ router.get('/skills', async (req, res, next) => {
 });
 
 // POST /activity/:moduleId
-router.post('/activity/:moduleId', async (req, res, next) => {
-  try {
-    const { moduleId } = req.params;
-    const { attempts, score, timeSpentMinutes, expectedTimeMinutes, completionPct } = req.body;
-
-    if (attempts === undefined || attempts === null) {
-      return next(new BadRequestError('attempts is required in request body'));
+router.post(
+  '/activity/:moduleId',
+  validate({ params: activityParams, body: activityBody }),
+  async (req, res, next) => {
+    try {
+      const result = await recordActivity(req.learnerId, req.params.moduleId, req.body);
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
     }
-
-    const result = await recordActivity(req.learnerId, moduleId, {
-      attempts,
-      score,
-      timeSpentMinutes,
-      expectedTimeMinutes,
-      completionPct,
-    });
-
-    res.status(201).json(result);
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
 
 module.exports = router;

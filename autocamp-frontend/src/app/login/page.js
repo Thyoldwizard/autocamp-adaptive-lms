@@ -9,6 +9,8 @@ import {
   BarChart3,
   BookOpenCheck,
   CheckCircle2,
+  Eye,
+  EyeOff,
   GraduationCap,
   Radar,
   Sparkles,
@@ -68,7 +70,7 @@ function Ticker() {
   const content = [...tickerItems, ...tickerItems];
 
   return (
-    <div className="overflow-hidden border-y border-white/20 bg-black/20 backdrop-blur-xl">
+    <div className="overflow-hidden border-y border-white/20 bg-black/20 backdrop-blur-xl" aria-hidden="true">
       <motion.div
         className="flex w-max gap-6 py-3 text-[11px] font-bold uppercase text-white/80"
         animate={{ x: ['0%', '-50%'] }}
@@ -108,9 +110,10 @@ function VisualPanel() {
       <div
         className="absolute inset-0 scale-[1.03] bg-cover bg-center"
         style={{ backgroundImage: `url(${IMAGE_URL})` }}
+        aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(17,43,33,0.98)_0%,rgba(45,106,79,0.86)_48%,rgba(244,162,97,0.42)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(17,43,33,0.98)_0%,rgba(45,106,79,0.86)_48%,rgba(244,162,97,0.42)_100%)]" aria-hidden="true" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:64px_64px]" aria-hidden="true" />
 
       <div className="absolute left-0 right-0 top-0 z-10">
         <Ticker />
@@ -170,6 +173,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -203,8 +207,8 @@ export default function LoginPage() {
       <VisualPanel />
 
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 sm:px-8 lg:px-12">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(45,106,79,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(45,106,79,0.045)_1px,transparent_1px)] bg-[size:56px_56px]" />
-        <div className="absolute right-[-120px] top-[-120px] h-[320px] w-[320px] rounded-full bg-accent/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(45,106,79,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(45,106,79,0.045)_1px,transparent_1px)] bg-[size:56px_56px]" aria-hidden="true" />
+        <div className="absolute right-[-120px] top-[-120px] h-[320px] w-[320px] rounded-full bg-accent/20 blur-3xl" aria-hidden="true" />
 
         <motion.div
           variants={formContainer}
@@ -263,19 +267,37 @@ export default function LoginPage() {
               </motion.div>
 
               <motion.div variants={fieldGroup} className="flex flex-col gap-2">
-                <label htmlFor="password" className="text-sm font-bold text-text">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
-                  className={fieldCls}
-                />
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="text-sm font-bold text-text">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-bold text-primary transition-colors duration-micro hover:text-[#255c43] hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Your password"
+                    className={`${fieldCls} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-muted transition-colors hover:text-primary"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </motion.div>
 
               {error && (

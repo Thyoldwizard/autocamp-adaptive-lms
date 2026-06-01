@@ -6,10 +6,8 @@
  * Rules-based placement logic.  No LLM — uses background_type from the
  * learner record to assign starting proficiency values for program skills.
  *
- * background_type → starting_proficiency map:
- *   technical     → 0.30  (some relevant experience)
- *   semi_technical → 0.15  (limited exposure)
- *   non_technical  → 0.05  (near-zero baseline)
+ * The background_type → starting_proficiency map and the fallback default
+ * live in config/rules.js (onboarding.backgroundProficiency / defaultProficiency).
  */
 
 const learnersRepo   = require('../db/repositories/learners.repo');
@@ -17,16 +15,10 @@ const skillsRepo     = require('../db/repositories/skills.repo');
 const skillStateRepo = require('../db/repositories/skillState.repo');
 const modulesRepo    = require('../db/repositories/modules.repo');
 const { getLearnerModel } = require('./learnerModel.service');
+const { getRules }        = require('../config/rules');
 
-// ─── Placement config ─────────────────────────────────────────────────────────
-
-const BACKGROUND_PROFICIENCY = {
-  technical:      0.30,
-  semi_technical: 0.15,
-  non_technical:  0.05,
-};
-
-const DEFAULT_PROFICIENCY = 0.05; // fallback for unknown background types
+// Starting proficiency by background_type comes from config/rules.js → onboarding
+// (backgroundProficiency map + defaultProficiency fallback for unknown types).
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -67,6 +59,14 @@ async function getOnboardingStatus(learnerId) {
 async function completeOnboarding(learnerId, answers = {}) {
   if (!learnerId) throw new Error('completeOnboarding: learnerId is required');
 
+  // Guard: idempotent — if skill_state rows already exist, return the model
+  // without double-writing. Callers can force re-calibration by passing
+  // explicit answer overrides, but only if they acknowledge the re-run.
+  const existing = await skillStateRepo.findByLearnerId(learnerId);
+  if (existing.length > 0) {
+    return getLearnerModel(learnerId);
+  }
+
   // 1. Load learner
   const learner = await learnersRepo.findById(learnerId);
   if (!learner) {
@@ -85,21 +85,16 @@ async function completeOnboarding(learnerId, answers = {}) {
     return getLearnerModel(learnerId);
   }
 
-  // 3. Load skill catalog rows for those IDs in parallel with baseline calc
-  const baseProficiency = BACKGROUND_PROFICIENCY[learner.background_type] ?? DEFAULT_PROFICIENCY;
+  // 3. Load skill catalog rows for those IDs (need code → id mapping for answers)
+  const { backgroundProficiency, defaultProficiency } = getRules().onboarding;
+  const baseProficiency = backgroundProficiency[learner.background_type] ?? defaultProficiency;
 
-  // Fetch skills — we need code → id mapping for answers lookup
-  const { data: skillRows, error } = await require('../config/supabase')
-    .from('skills')
-    .select('id, code')
-    .in('id', skillIds);
-
-  if (error) throw error;
+  const skillRows = await skillsRepo.findByIds(skillIds);
 
   // 4. Upsert all skill_state rows in parallel
   const now = new Date().toISOString();
   await Promise.all(
-    (skillRows ?? []).map((skill) => {
+    skillRows.map((skill) => {
       const proficiency = answers[skill.code] !== undefined
         ? Number(answers[skill.code])
         : baseProficiency;

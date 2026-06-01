@@ -1,12 +1,17 @@
 const { NODE_ENV } = require('../config/env');
+const logger = require('../lib/logger');
 
 // eslint-disable-next-line no-unused-vars
-function errorHandler(err, _req, res, _next) {
+function errorHandler(err, req, res, _next) {
   const statusCode = err.statusCode || 500;
   const isProd = NODE_ENV === 'production';
 
   if (!err.isOperational) {
-    console.error('[unhandled error]', err);
+    logger.error('unhandled error', {
+      requestId: req.requestId,
+      message: err.message,
+      stack: err.stack,
+    });
   }
 
   res.status(statusCode).json({

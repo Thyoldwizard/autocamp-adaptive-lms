@@ -165,6 +165,22 @@ require.cache[require.resolve('../../src/services/learnerModel.service')] = {
   },
 };
 
+// ─── Mock: signalSweep job ────────────────────────────────────────────────────
+let mockSweepResult = { learnersScanned: 3, signalsCreated: [] };
+let mockSweepError  = null;
+
+require.cache[require.resolve('../../src/jobs/signalSweep')] = {
+  id:       require.resolve('../../src/jobs/signalSweep'),
+  filename: require.resolve('../../src/jobs/signalSweep'),
+  loaded:   true,
+  exports: {
+    runSweep: async () => {
+      if (mockSweepError) throw mockSweepError;
+      return mockSweepResult;
+    },
+  },
+};
+
 // ─── Load app AFTER all mock injections ───────────────────────────────────────
 const app = require('../../src/app');
 
@@ -303,7 +319,7 @@ describe('GET /api/student/skills', () => {
 
 describe('POST /api/student/activity/:moduleId', () => {
 
-  const MODULE_ID = 'mod-uuid-sql';
+  const MODULE_ID = '00000000-0000-0000-0000-000000000000';
   const ACTIVITY_BODY = { attempts: 2, score: 75, completionPct: 50 };
 
   test('201 with progress and signalsCreated — valid student token', async () => {
@@ -466,7 +482,7 @@ describe('GET /api/instructor/cohort/heatmap', () => {
 
 describe('POST /api/instructor/learner/:learnerId/flag', () => {
 
-  const LEARNER_ID = 'learner-uuid-amna';
+  const LEARNER_ID = '00000000-0000-0000-0000-000000000000';
 
   test('201 with signal — valid instructor token + note', async () => {
     mockFlagResult = FAKE_FLAG;
@@ -644,4 +660,63 @@ describe('GET /api/instructor/at-risk/:learnerId', () => {
     assert.equal(status, 403);
   });
 
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('POST /api/instructor/jobs/sweep', () => {
+  test('200 — returns learnersScanned + signalsCreated count', async () => {
+    mockSweepError  = null;
+    mockSweepResult = { learnersScanned: 3, signalsCreated: [{ learnerId: 'x', reason: 'stalled_module', signal: {} }] };
+
+    const { status, body } = await request(
+      'POST', '/api/instructor/jobs/sweep',
+      null,
+      authH(INSTRUCTOR_TOKEN),
+    );
+
+    assert.equal(status, 200);
+    assert.equal(body.learnersScanned, 3);
+    assert.equal(body.signalsCreated, 1);
+  });
+
+  test('200 — zero signals when no issues found', async () => {
+    mockSweepError  = null;
+    mockSweepResult = { learnersScanned: 3, signalsCreated: [] };
+
+    const { status, body } = await request(
+      'POST', '/api/instructor/jobs/sweep',
+      null,
+      authH(INSTRUCTOR_TOKEN),
+    );
+
+    assert.equal(status, 200);
+    assert.equal(body.signalsCreated, 0);
+  });
+
+  test('401 — no token', async () => {
+    const { status } = await request('POST', '/api/instructor/jobs/sweep');
+    assert.equal(status, 401);
+  });
+
+  test('403 — student token rejected', async () => {
+    const { status } = await request(
+      'POST', '/api/instructor/jobs/sweep',
+      null,
+      authH(STUDENT_TOKEN),
+    );
+    assert.equal(status, 403);
+  });
+
+  test('500 — sweep error propagates through errorHandler', async () => {
+    mockSweepError = Object.assign(new Error('DB unavailable'), { isOperational: false });
+
+    const { status } = await request(
+      'POST', '/api/instructor/jobs/sweep',
+      null,
+      authH(INSTRUCTOR_TOKEN),
+    );
+
+    assert.equal(status, 500);
+    mockSweepError = null;
+  });
 });

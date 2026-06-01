@@ -189,6 +189,10 @@ describe('FALLBACK_QUESTIONS', () => {
 // 2. CHECKIN SERVICE — with mocked dependencies
 // ─────────────────────────────────────────────────────────────────────────────
 
+// In-memory stand-in for the checkin_sessions DB table, shared across both
+// service describe blocks below.
+const mockSessionStore = new Map();
+
 describe('checkin.service — startCheckin() with mocked deps', () => {
 
   // Clear the module cache so we can inject mocks
@@ -237,6 +241,18 @@ describe('checkin.service — startCheckin() with mocked deps', () => {
     exports: {
       findByLearnerAndSkillId: async () => mockFindSkillState,
       updateProficiency: async () => ({}),
+    },
+  };
+
+  require.cache[require.resolve('../../src/db/repositories/checkinSessions.repo')] = {
+    id: require.resolve('../../src/db/repositories/checkinSessions.repo'),
+    filename: require.resolve('../../src/db/repositories/checkinSessions.repo'),
+    loaded: true,
+    exports: {
+      create:       async (row) => { mockSessionStore.set(row.id, row); return row; },
+      findById:     async (id)  => mockSessionStore.get(id) ?? null,
+      deleteById:   async (id)  => { mockSessionStore.delete(id); },
+      purgeExpired: async ()    => {},
     },
   };
 
@@ -320,11 +336,11 @@ describe('checkin.service — startCheckin() with mocked deps', () => {
 
 describe('checkin.service — submitCheckin() with mocked deps', () => {
 
-  const { startCheckin, submitCheckin, sessions } = require('../../src/services/checkin.service');
+  const { startCheckin, submitCheckin } = require('../../src/services/checkin.service');
 
-  // Reset sessions before each test
+  // Reset the mock session store before each test
   before(() => {
-    sessions.clear();
+    mockSessionStore.clear();
   });
 
   test('all-correct answers raise proficiency', async () => {
@@ -363,11 +379,11 @@ describe('checkin.service — submitCheckin() with mocked deps', () => {
     assert.equal(result.review.length, 2);
     assert.equal(result.review[0].isCorrect, true);
     assert.equal(result.review[0].explanation, 'A is correct.');
-    assert.equal(sessions.has(start.sessionId), false, 'session should be deleted');
+    assert.equal(mockSessionStore.has(start.sessionId), false, 'session should be deleted');
   });
 
   test('all-wrong answers lower proficiency', async () => {
-    sessions.clear();
+    mockSessionStore.clear();
 
     require('../../src/db/repositories/learners.repo').findById = async () => ({
       id: 'learner-uuid-test', name: 'Amna', background_type: 'non_technical', program: 'da',
@@ -485,7 +501,6 @@ describe('Check-in route tests', () => {
         if (mockState.submitError) throw mockState.submitError;
         return mockState.submitResult;
       },
-      sessions: new Map(),
     },
   };
 
@@ -601,7 +616,7 @@ describe('Check-in route tests', () => {
 
     const { status, body } = await request(
       'POST', '/api/student/checkin/submit/sql',
-      { sessionId: 'session-uuid-1', answers: [0, 1, 2, 3] },
+      { sessionId: '00000000-0000-0000-0000-000000000000', answers: [0, 1, 2, 3] },
       authH(STUDENT_TOKEN),
     );
 
