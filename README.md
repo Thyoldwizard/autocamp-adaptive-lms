@@ -1,4 +1,4 @@
-# atomcamp Adaptive LMS
+# pace — Adaptive LMS
 
 > An open-source adaptive learning management system for cohort-based bootcamps — connecting student progress, instructor visibility, and timely support into one confident workspace.
 
@@ -14,6 +14,8 @@
 ## Demo
 
 **No account needed.** Click "Explore as student" or "Explore as instructor" on the landing page — every screen works without a backend.
+
+> 🎬 **[Watch the demo video (90 sec)](docs/demo.mp4)** — landing → student dashboard → skills → check-in → AI companion → instructor cohort → learner detail.
 
 > **Try it instantly:** the landing page demo buttons drop you straight into either role — no signup, no backend, no config.
 
@@ -37,7 +39,7 @@
 
 ## What it is
 
-atomcamp Adaptive LMS is a full-stack application that models each student as a **living learner profile** — background, goals, skill confidence, module activity, check-ins, and companion conversations all feed a single model. The system uses that model to surface the right next action for the student and the right intervention signal for the instructor.
+**pace** is a full-stack application that models each student as a **living learner profile** — background, goals, skill confidence, module activity, check-ins, and companion conversations all feed a single model. The system uses that model to surface the right next action for the student and the right intervention signal for the instructor.
 
 It is **not** a course delivery platform. It is the **adaptive intelligence layer** that wraps one — telling students what to work on next, and telling instructors which learners need attention before they fall behind.
 
@@ -233,7 +235,7 @@ After running `npm run seed`:
 | recharts charts (F6) | ✅ Complete |
 | SEO (OG, Twitter card, theme-color) | ✅ Complete |
 | Auth form polish | ✅ Complete |
-| Screenshots + demo video | ✅ Complete |
+| Screenshots (10) + demo video | ✅ Complete |
 | Deployment docs (Vercel + Railway/Render) | 🔄 Planned (v0.2) |
 | E2E tests (Playwright) | 🔄 Planned (v0.2) |
 | Mobile-first layout audit | 🔄 Planned (v0.2) |
@@ -300,4 +302,4 @@ All sincere contributions are welcome — code, docs, design feedback, and issue
 
 ## License
 
-[MIT](LICENSE) — © 2026 atomcamp contributors
+[MIT](LICENSE) — © 2026 pace contributors

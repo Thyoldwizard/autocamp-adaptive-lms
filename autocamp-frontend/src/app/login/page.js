@@ -61,7 +61,7 @@ function BrandWordmark({ light = false }) {
         light ? 'text-white' : 'text-primary'
       }`}
     >
-      atom<span className="text-accent">camp</span>
+      pa<span className="text-accent">ce</span>
     </span>
   );
 }
@@ -121,7 +121,7 @@ function VisualPanel() {
 
       <div className="relative z-10 flex min-h-screen flex-col justify-between px-12 py-14 xl:px-16">
         <div className="flex items-center justify-between">
-          <Link href="/" aria-label="atomcamp home">
+          <Link href="/" aria-label="pace home">
             <BrandWordmark light />
           </Link>
           <div className="rounded-badge border border-white/30 bg-white/12 px-4 py-2 text-xs font-bold uppercase text-white backdrop-blur-2xl">
@@ -217,7 +217,7 @@ export default function LoginPage() {
           className="relative w-full max-w-[500px]"
         >
           <motion.div variants={fieldGroup} className="mb-8 flex items-center justify-between">
-            <Link href="/" aria-label="atomcamp home">
+            <Link href="/" aria-label="pace home">
               <BrandWordmark />
             </Link>
             <Link

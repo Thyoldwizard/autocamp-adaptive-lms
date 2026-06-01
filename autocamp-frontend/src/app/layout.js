@@ -5,23 +5,23 @@ const OG_IMAGE =
 
 export const metadata = {
   title: {
-    default: 'atomcamp — Adaptive LMS',
-    template: '%s | atomcamp',
+    default: 'pace — Adaptive LMS',
+    template: '%s | pace',
   },
   description:
     'An adaptive LMS for cohort-based education — connecting student progress, instructor visibility, and timely support into one confident workspace.',
   keywords: ['adaptive learning', 'LMS', 'bootcamp', 'cohort', 'data analytics', 'AI'],
   openGraph: {
     type: 'website',
-    siteName: 'atomcamp',
-    title: 'atomcamp — Adaptive LMS',
+    siteName: 'pace',
+    title: 'pace — Adaptive LMS',
     description:
       'An adaptive LMS for cohort-based education — connecting student progress, instructor visibility, and timely support.',
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'atomcamp Adaptive LMS' }],
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'pace Adaptive LMS' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'atomcamp — Adaptive LMS',
+    title: 'pace — Adaptive LMS',
     description:
       'An adaptive LMS for cohort-based education — connecting student progress, instructor visibility, and timely support.',
     images: [OG_IMAGE],

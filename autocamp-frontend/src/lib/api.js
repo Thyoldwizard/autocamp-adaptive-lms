@@ -1,5 +1,5 @@
 /**
- * Thin fetch wrapper for the autocamp backend.
+ * Thin fetch wrapper for the pace backend.
  *
  * - Base URL comes from NEXT_PUBLIC_API_URL (default: http://localhost:3000/api)
  * - Reads the JWT from localStorage key `atomcamp_token` and sends it as
