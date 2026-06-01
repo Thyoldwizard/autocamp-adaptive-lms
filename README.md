@@ -148,8 +148,8 @@ pace-lms/
 ### 1. Clone
 
 ```bash
-git clone https://github.com/Thyoldwizard/autocamp-adaptive-lms.git
-cd autocamp-adaptive-lms
+git clone https://github.com/Thyoldwizard/pace-adaptive-lms.git
+cd pace-adaptive-lms
 ```
 
 ### 2. Backend
